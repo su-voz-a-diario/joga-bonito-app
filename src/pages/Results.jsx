@@ -4,14 +4,13 @@ import MatchCard from '../components/MatchCard';
 import { Search, Calendar, MapPin, Trophy, EyeOff, Award } from 'lucide-react';
 
 const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
-  const { matches, tournaments, fields, categories } = useDatabase();
+  const { matches, tournaments, fields, categories, teams, globalCategoryFilter, setGlobalCategoryFilter } = useDatabase();
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
   const [selectedTournament, setSelectedTournament] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Finished matches only
   const finishedMatches = matches.filter(m => m.status === 'finished');
@@ -21,7 +20,6 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
 
   const filteredMatches = finishedMatches.filter(match => {
     // 1. Search by team name
-    const { teams } = useDatabase();
     const homeTeam = teams.find(t => t.id === match.homeTeamId)?.name.toLowerCase() || '';
     const awayTeam = teams.find(t => t.id === match.awayTeamId)?.name.toLowerCase() || '';
     const query = searchTerm.toLowerCase();
@@ -38,7 +36,7 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
 
     // 5. Filter by category
     const matchCategoryId = match.categoryId || tournaments.find(t => t.id === match.tournamentId)?.categoryId;
-    const matchesCategory = selectedCategory === 'all' || matchCategoryId === selectedCategory;
+    const matchesCategory = globalCategoryFilter === 'all' || matchCategoryId === globalCategoryFilter;
 
     return matchesSearch && matchesField && matchesTournament && matchesDate && matchesCategory;
   }).sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime)); // Sort newest results first
@@ -113,8 +111,8 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.75rem' }}><Award size={12} /> Categoría</label>
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={globalCategoryFilter}
+                onChange={(e) => setGlobalCategoryFilter(e.target.value)}
                 className="form-select"
                 style={{ padding: '8px 12px', fontSize: '0.85rem' }}
               >
@@ -175,7 +173,7 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
           </span>
           <button 
             className="btn-outline" 
-            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); setSelectedCategory('all'); }}
+            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); setGlobalCategoryFilter('all'); }}
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}
           >
             Limpiar filtros

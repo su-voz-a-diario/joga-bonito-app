@@ -3,8 +3,7 @@ import { useDatabase } from '../context/DatabaseContext';
 import { Trophy, Calendar, Award, CheckCircle, Info } from 'lucide-react';
 
 const Tournaments = ({ setCurrentTab }) => {
-  const { tournaments, teams, categories } = useDatabase();
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { tournaments, teams, categories, globalCategoryFilter, setGlobalCategoryFilter } = useDatabase();
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -20,7 +19,7 @@ const Tournaments = ({ setCurrentTab }) => {
   };
 
   const filteredTournaments = tournaments.filter(t => {
-    return selectedCategory === 'all' || t.categoryId === selectedCategory;
+    return globalCategoryFilter === 'all' || t.categoryId === globalCategoryFilter;
   });
 
   return (
@@ -43,8 +42,8 @@ const Tournaments = ({ setCurrentTab }) => {
             <Award size={12} /> Filtrar por Categoría
           </label>
           <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            value={globalCategoryFilter}
+            onChange={(e) => setGlobalCategoryFilter(e.target.value)}
             className="form-select"
             style={{ padding: '8px 12px', fontSize: '0.85rem' }}
           >
@@ -140,23 +139,36 @@ const Tournaments = ({ setCurrentTab }) => {
 
                 {/* Row 3: Registered Teams list preview */}
                 <div>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle size={14} style={{ color: 'var(--secondary)' }} /> Equipos Participantes ({teams.length})
-                  </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {teams.map(team => (
-                      <span key={team.id} style={{
-                        fontSize: '0.75rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        padding: '3px 8px',
-                        color: 'var(--text-main)'
-                      }}>
-                        {team.logo} {team.name}
-                      </span>
-                    ))}
-                  </div>
+                  {(() => {
+                    const tourTeams = teams.filter(team => team.categoryId === t.categoryId);
+                    return (
+                      <>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle size={14} style={{ color: 'var(--secondary)' }} /> Equipos Participantes ({tourTeams.length})
+                        </h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {tourTeams.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Sin equipos registrados en esta categoría
+                            </span>
+                          ) : (
+                            tourTeams.map(team => (
+                              <span key={team.id} style={{
+                                fontSize: '0.75rem',
+                                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '6px',
+                                padding: '3px 8px',
+                                color: 'var(--text-main)'
+                              }}>
+                                {team.logo} {team.name}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Row 4: Call to Actions */}

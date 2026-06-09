@@ -3,13 +3,15 @@ import { useDatabase } from '../context/DatabaseContext';
 import { Search, User, Phone, Users, ShieldAlert, ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 
 const Teams = () => {
-  const { teams, matches } = useDatabase();
+  const { teams, matches, categories, globalCategoryFilter, setGlobalCategoryFilter } = useDatabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedTeamId, setExpandedTeamId] = useState(null);
 
-  const filteredTeams = teams.filter(team =>
-    team.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTeams = teams.filter(team => {
+    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = globalCategoryFilter === 'all' || team.categoryId === globalCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const toggleExpand = (teamId) => {
     if (expandedTeamId === teamId) {
@@ -82,9 +84,9 @@ const Teams = () => {
         </p>
       </div>
 
-      {/* SEARCH BAR */}
-      <div className="glass-panel" style={{ padding: '12px' }}>
-        <div style={{ position: 'relative' }}>
+      {/* SEARCH BAR & CATEGORY FILTER */}
+      <div className="glass-panel" style={{ padding: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -94,6 +96,19 @@ const Teams = () => {
             className="form-input"
             style={{ paddingLeft: '38px' }}
           />
+        </div>
+        <div style={{ minWidth: '180px' }}>
+          <select 
+            value={globalCategoryFilter} 
+            onChange={(e) => setGlobalCategoryFilter(e.target.value)} 
+            className="form-select"
+            style={{ height: '100%', minHeight: '38px', padding: '8px 12px', fontSize: '0.85rem' }}
+          >
+            <option value="all">Todas las Categorías</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -138,9 +153,14 @@ const Teams = () => {
                       <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
                         {team.name}
                       </h3>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <User size={12} /> Capitán: {team.captainName || 'Sin asignar'}
-                      </p>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <User size={12} /> Capitán: {team.captainName || 'Sin asignar'}
+                        </p>
+                        <span className="badge" style={{ fontSize: '0.62rem', padding: '1px 6px', opacity: 0.85 }}>
+                          {categories.find(c => c.id === team.categoryId)?.name || 'Sin categoría'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

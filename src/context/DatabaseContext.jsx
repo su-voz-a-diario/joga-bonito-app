@@ -16,52 +16,53 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const DEFAULT_TEAMS = [
-  { id: '1', name: 'Atlético Cuautepec', logo: '⚽', captainName: 'Ricardo García', captainPhone: '5512345678', players: ['Carlos Ortiz', 'Javier López', 'Mauricio Pineda', 'Roberto Solís', 'Daniel Vega', 'Fabián Ruiz'] },
-  { id: '2', name: 'Real Azteca', logo: '👑', captainName: 'Hugo Sánchez', captainPhone: '5587654321', players: ['Luis Mendoza', 'Ángel Cruz', 'Esteban Marín', 'Gabriel Soto', 'Pedro Damián', 'Arturo Ortiz'] },
-  { id: '3', name: 'Joga Bonito FC', logo: '🇧🇷', captainName: 'Alex Silva', captainPhone: '5599887766', players: ['Ronaldo N.', 'Ronaldinho G.', 'Kaká D.', 'Adriano I.', 'Robinho S.', 'Neymar J.'] },
-  { id: '4', name: 'Samba Kings', logo: '🥁', captainName: 'Diego Torres', captainPhone: '5522334455', players: ['Claudio P.', 'Marcelo V.', 'Dani A.', 'Thiago S.', 'Casemiro C.', 'Fred B.'] },
-  { id: '5', name: 'Deportivo Brasil', logo: '🦖', captainName: 'Juan Carlos', captainPhone: '5577889900', players: ['Julio C.', 'Lúcio F.', 'Juan S.', 'Cafu M.', 'Roberto C.', 'Emerson F.'] },
-  { id: '6', name: 'Cariocas FC', logo: '🏖️', captainName: 'Mateo Gómez', captainPhone: '5544556677', players: ['Bebeto A.', 'Romario F.', 'Rivaldo V.', 'Dunga C.', 'Taffarel C.', 'Aldair S.'] },
-  { id: '7', name: 'La Raza Azteca', logo: '🇲🇽', captainName: 'Jesús Corona', captainPhone: '5566778899', players: ['Memo O.', 'Chicharito H.', 'Raúl J.', 'Andrés G.', 'Hector H.', 'Tecatito C.'] },
-  { id: '8', name: 'Guerreros Fut 7', logo: '🏹', captainName: 'Fernando Torres', captainPhone: '5533221100', players: ['Iker C.', 'Carles P.', 'Sergio R.', 'Xavi H.', 'Andrés I.', 'David V.'] },
-  { id: '9', name: 'Galácticos Azteca', logo: '🌌', captainName: 'Zinedine Zidane', captainPhone: '5511223344', players: ['Luis F.', 'Ronaldo F.', 'David B.', 'Roberto C.', 'Raúl G.', 'Iker C.'] },
-  { id: '10', name: 'Fluminense Cuautepec', logo: '🔴', captainName: 'Fred Guedes', captainPhone: '5588990011', players: ['Ganso P.', 'Marcelo S.', 'German C.', 'Felipe M.', 'Keno A.', 'Fabio D.'] }
+  { id: '1', name: 'Atlético Cuautepec', logo: '⚽', captainName: 'Ricardo García', captainPhone: '5512345678', categoryId: '1', players: ['Carlos Ortiz', 'Javier López', 'Mauricio Pineda', 'Roberto Solís', 'Daniel Vega', 'Fabián Ruiz'] },
+  { id: '2', name: 'Real Azteca', logo: '👑', captainName: 'Hugo Sánchez', captainPhone: '5587654321', categoryId: '1', players: ['Luis Mendoza', 'Ángel Cruz', 'Esteban Marín', 'Gabriel Soto', 'Pedro Damián', 'Arturo Ortiz'] },
+  { id: '3', name: 'Joga Bonito Femenil', logo: '🇧🇷', captainName: 'Alex Silva', captainPhone: '5599887766', categoryId: '2', players: ['Ronaldo N.', 'Ronaldinho G.', 'Kaká D.', 'Adriano I.', 'Robinho S.', 'Neymar J.'] },
+  { id: '4', name: 'Samba Queens', logo: '🥁', captainName: 'Diego Torres', captainPhone: '5522334455', categoryId: '2', players: ['Claudio P.', 'Marcelo V.', 'Dani A.', 'Thiago S.', 'Casemiro C.', 'Fred B.'] },
+  { id: '5', name: 'Deportivo Brasil Mixto', logo: '🦖', captainName: 'Juan Carlos', captainPhone: '5577889900', categoryId: '3', players: ['Julio C.', 'Lúcio F.', 'Juan S.', 'Cafu M.', 'Roberto C.', 'Emerson F.'] },
+  { id: '6', name: 'Cariocas Mixto', logo: '🏖️', captainName: 'Mateo Gómez', captainPhone: '5544556677', categoryId: '3', players: ['Bebeto A.', 'Romario F.', 'Rivaldo V.', 'Dunga C.', 'Taffarel C.', 'Aldair S.'] },
+  { id: '7', name: 'La Raza Juvenil', logo: '🇲🇽', captainName: 'Jesús Corona', captainPhone: '5566778899', categoryId: '5', players: ['Memo O.', 'Chicharito H.', 'Raúl J.', 'Andrés G.', 'Hector H.', 'Tecatito C.'] },
+  { id: '8', name: 'Guerreros Juvenil', logo: '🏹', captainName: 'Fernando Torres', captainPhone: '5533221100', categoryId: '5', players: ['Iker C.', 'Carles P.', 'Sergio R.', 'Xavi H.', 'Andrés I.', 'David V.'] },
+  { id: '9', name: 'Galácticos Veteranos', logo: '🌌', captainName: 'Zinedine Zidane', captainPhone: '5511223344', categoryId: '6', players: ['Luis F.', 'Ronaldo F.', 'David B.', 'Roberto C.', 'Raúl G.', 'Iker C.'] },
+  { id: '10', name: 'Fluminense Veteranos', logo: '🔴', captainName: 'Fred Guedes', captainPhone: '5588990011', categoryId: '6', players: ['Ganso P.', 'Marcelo S.', 'German C.', 'Felipe M.', 'Keno A.', 'Fabio D.'] }
 ];
 
 const DEFAULT_TOURNAMENTS = [
   { id: '1', name: 'Torneo Nocturno Azteca', categoryId: '1', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
-  { id: '2', name: 'Copa Brasil Cuautepec', categoryId: '6', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } }
+  { id: '2', name: 'Copa Femenil Azteca', categoryId: '2', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
+  { id: '3', name: 'Liga Mixta Cuautepec', categoryId: '3', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
+  { id: '4', name: 'Torneo Juvenil Azteca', categoryId: '5', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
+  { id: '5', name: 'Copa Veteranos Azteca', categoryId: '6', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } }
 ];
 
 const DEFAULT_ANNOUNCEMENTS = [
-  { id: '1', title: '🏆 ¡Gran Final del Torneo Nocturno!', content: 'Este viernes 12 de junio a las 21:00 hrs se jugará la Gran Final en la Cancha 1 entre Joga Bonito FC y Real Azteca. ¡Habrá premiación especial, música y sorpresas!', date: '2026-06-09', isImportant: true },
+  { id: '1', title: '🏆 ¡Gran Final del Torneo Nocturno!', content: 'Este viernes 12 de junio a las 21:00 hrs se jugará la Gran Final en la Cancha 1 entre Atlético Cuautepec y Real Azteca. ¡Habrá premiación especial, música y sorpresas!', date: '2026-06-09', isImportant: true },
   { id: '2', title: '📝 Inscripciones Abiertas', content: 'Ya puedes inscribir a tu equipo para el próximo Torneo Sabatino. Envíanos un mensaje por WhatsApp para reservar tu cupo. Cupo limitado a 12 equipos.', date: '2026-06-07', isImportant: false },
   { id: '3', title: '⚠️ Mantenimiento Preventivo', content: 'La Cancha 2 estará cerrada el próximo lunes de 8:00 AM a 2:00 PM por cambio de pasto sintético en las áreas de portería. Agradecemos su comprensión.', date: '2026-06-05', isImportant: false }
 ];
 
 // Seed matches around the current date (June 9, 2026)
 const DEFAULT_MATCHES = [
-  // Finished Matches (Results)
+  // Category 1: Varonil Libre
   { id: '1', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-05T19:00', homeTeamId: '1', awayTeamId: '2', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Excelente partido de ida.' },
-  { id: '2', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-05T20:00', homeTeamId: '3', awayTeamId: '4', homeScore: 5, awayScore: 3, status: 'finished', comments: 'Hat-trick de Ronaldinho.' },
-  { id: '3', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-06T19:00', homeTeamId: '5', awayTeamId: '6', homeScore: 2, awayScore: 2, status: 'finished', comments: 'Empate de último minuto.' },
-  { id: '4', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-06T20:00', homeTeamId: '7', awayTeamId: '8', homeScore: 1, awayScore: 4, status: 'finished', comments: 'Dominio absoluto de Guerreros.' },
+  { id: '2', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-09T20:30', homeTeamId: '2', awayTeamId: '1', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Clásico de Cuautepec.' },
   
-  { id: '5', tournamentId: '2', categoryId: '6', fieldId: '1', dateTime: '2026-06-07T18:00', homeTeamId: '9', awayTeamId: '10', homeScore: 4, awayScore: 1, status: 'finished', comments: 'Veteranos en acción.' },
-  { id: '6', tournamentId: '2', categoryId: '6', fieldId: '2', dateTime: '2026-06-07T19:00', homeTeamId: '3', awayTeamId: '5', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Juego muy reñido.' },
+  // Category 2: Femenil Libre
+  { id: '3', tournamentId: '2', categoryId: '2', fieldId: '2', dateTime: '2026-06-05T20:00', homeTeamId: '3', awayTeamId: '4', homeScore: 5, awayScore: 3, status: 'finished', comments: 'Excelente juego de samba.' },
+  { id: '4', tournamentId: '2', categoryId: '2', fieldId: '2', dateTime: '2026-06-09T21:30', homeTeamId: '4', awayTeamId: '3', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Entrenamiento femenil.' },
 
-  // Live / In progress match
-  { id: '7', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-09T19:30', homeTeamId: '3', awayTeamId: '1', homeScore: 2, awayScore: 1, status: 'live', comments: 'Minuto 35, Joga Bonito domina.' },
+  // Category 3: Mixto
+  { id: '5', tournamentId: '3', categoryId: '3', fieldId: '1', dateTime: '2026-06-06T19:00', homeTeamId: '5', awayTeamId: '6', homeScore: 2, awayScore: 2, status: 'finished', comments: 'Empate de último minuto.' },
+  { id: '6', tournamentId: '3', categoryId: '3', fieldId: '2', dateTime: '2026-06-10T19:00', homeTeamId: '6', awayTeamId: '5', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Liga mixta jornada 2.' },
 
-  // Scheduled Matches (Upcoming)
-  { id: '8', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-09T20:30', homeTeamId: '2', awayTeamId: '8', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Clásico de Cuautepec.' },
-  { id: '9', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-09T21:30', homeTeamId: '4', awayTeamId: '6', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Duelo por la permanencia.' },
-  { id: '10', tournamentId: '2', categoryId: '6', fieldId: '1', dateTime: '2026-06-10T19:00', homeTeamId: '7', awayTeamId: '9', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Copa veteranos jornada 4.' },
-  { id: '11', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-10T20:00', homeTeamId: '10', awayTeamId: '5', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Fútbol rápido de alta velocidad.' },
+  // Category 5: Juvenil
+  { id: '7', tournamentId: '4', categoryId: '5', fieldId: '2', dateTime: '2026-06-06T20:00', homeTeamId: '7', awayTeamId: '8', homeScore: 1, awayScore: 4, status: 'finished', comments: 'Dominio absoluto de Guerreros.' },
+  { id: '8', tournamentId: '4', categoryId: '5', fieldId: '1', dateTime: '2026-06-10T20:00', homeTeamId: '8', awayTeamId: '7', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Liga juvenil.' },
 
-  // Cancelled & Postponed
-  { id: '12', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-08T20:00', homeTeamId: '2', awayTeamId: '6', homeScore: null, awayScore: null, status: 'cancelled', comments: 'Cancelado por lluvia intensa.' },
-  { id: '13', tournamentId: '2', categoryId: '6', fieldId: '2', dateTime: '2026-06-08T19:00', homeTeamId: '8', awayTeamId: '10', homeScore: null, awayScore: null, status: 'postponed', comments: 'Reprogramado por acuerdo de capitanes.' }
+  // Category 6: Veteranos
+  { id: '9', tournamentId: '5', categoryId: '6', fieldId: '1', dateTime: '2026-06-07T18:00', homeTeamId: '9', awayTeamId: '10', homeScore: 4, awayScore: 1, status: 'finished', comments: 'Veteranos en acción.' },
+  { id: '10', tournamentId: '5', categoryId: '6', fieldId: '2', dateTime: '2026-06-08T19:00', homeTeamId: '10', awayTeamId: '9', homeScore: null, awayScore: null, status: 'postponed', comments: 'Reprogramado por acuerdo de capitanes.' }
 ];
 
 const DEFAULT_RESERVATIONS = [
@@ -107,6 +108,9 @@ export const DatabaseProvider = ({ children }) => {
     return localStorage.getItem('jb_role') || 'public'; // public, admin, auxiliar
   });
 
+  // Global Category filter for public views coordination
+  const [globalCategoryFilter, setGlobalCategoryFilter] = useState('all');
+
   const [fields] = useState([
     { id: '1', name: 'Cancha 1 - Joga Bonito' },
     { id: '2', name: 'Cancha 2 - Azteca' }
@@ -147,7 +151,7 @@ export const DatabaseProvider = ({ children }) => {
     if (!tournament) return [];
 
     const tournamentMatches = matches.filter(m => m.tournamentId === tournamentId && m.status === 'finished');
-    const tournamentTeams = teams; // All teams are available for simplify.
+    const tournamentTeams = teams.filter(t => t.categoryId === tournament.categoryId);
 
     const statsMap = {};
     tournamentTeams.forEach(team => {
@@ -270,10 +274,11 @@ export const DatabaseProvider = ({ children }) => {
   const deleteCategory = (id) => {
     const hasTournaments = tournaments.some(t => t.categoryId === id);
     const hasMatches = matches.some(m => m.categoryId === id);
-    if (hasTournaments || hasMatches) {
+    const hasTeams = teams.some(t => t.categoryId === id);
+    if (hasTournaments || hasMatches || hasTeams) {
       return { 
         success: false, 
-        error: 'No se puede eliminar la categoría: está asociada a torneos o partidos activos.' 
+        error: 'No se puede eliminar la categoría: está asociada a equipos, torneos o partidos activos.' 
       };
     }
     setCategories(prev => prev.filter(c => c.id !== id));
@@ -462,6 +467,8 @@ export const DatabaseProvider = ({ children }) => {
       fields,
       currentRole,
       setCurrentRole,
+      globalCategoryFilter,
+      setGlobalCategoryFilter,
       getStandings,
       checkCollision,
       

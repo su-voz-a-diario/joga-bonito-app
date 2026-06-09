@@ -4,14 +4,13 @@ import StandingsTable from '../components/StandingsTable';
 import { Award } from 'lucide-react';
 
 const Standings = () => {
-  const { tournaments, getStandings, categories } = useDatabase();
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { tournaments, getStandings, categories, globalCategoryFilter, setGlobalCategoryFilter } = useDatabase();
   
   // Set first tournament as active by default if available
   const [activeTournamentId, setActiveTournamentId] = useState('');
 
   const filteredTournaments = tournaments.filter(t => {
-    return selectedCategory === 'all' || t.categoryId === selectedCategory;
+    return globalCategoryFilter === 'all' || t.categoryId === globalCategoryFilter;
   });
 
   // Automatically select a valid tournament when the selected category changes
@@ -24,7 +23,7 @@ const Standings = () => {
     } else {
       setActiveTournamentId('');
     }
-  }, [selectedCategory, tournaments, activeTournamentId]);
+  }, [globalCategoryFilter, tournaments, activeTournamentId]);
 
   const activeTournament = tournaments.find(t => t.id === activeTournamentId);
   const standings = activeTournamentId ? getStandings(activeTournamentId) : [];
@@ -49,8 +48,8 @@ const Standings = () => {
             <Award size={12} /> Filtrar por Categoría
           </label>
           <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            value={globalCategoryFilter}
+            onChange={(e) => setGlobalCategoryFilter(e.target.value)}
             className="form-select"
             style={{ padding: '8px 12px', fontSize: '0.85rem' }}
           >

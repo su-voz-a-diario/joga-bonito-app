@@ -75,6 +75,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const [teamCaptain, setTeamCaptain] = useState('');
   const [teamPhone, setTeamPhone] = useState('');
   const [teamPlayersStr, setTeamPlayersStr] = useState('');
+  const [teamCategoryId, setTeamCategoryId] = useState('');
   const [teamSuccess, setTeamSuccess] = useState('');
   const [teamError, setTeamError] = useState('');
 
@@ -121,27 +122,11 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
   // Set default form values once data loads
   useEffect(() => {
-    if (tournaments.length > 0 && !matchTournament) {
-      setMatchTournament(tournaments[0].id);
+    if (categories.length > 0) {
+      if (!tourCatId) setTourCatId(categories[0].id);
+      if (!teamCategoryId) setTeamCategoryId(categories[0].id);
     }
-    if (teams.length >= 2) {
-      if (!matchHomeTeam) setMatchHomeTeam(teams[0].id);
-      if (!matchAwayTeam) setMatchAwayTeam(teams[1].id);
-    }
-    if (categories.length > 0 && !tourCatId) {
-      setTourCatId(categories[0].id);
-    }
-  }, [tournaments, teams, categories]);
-
-  // Inherit category from tournament automatically when tournament changes (only when creating a new match)
-  useEffect(() => {
-    if (matchTournament && !matchId) {
-      const selectedTour = tournaments.find(t => t.id === matchTournament);
-      if (selectedTour) {
-        setMatchCategoryId(selectedTour.categoryId || '');
-      }
-    }
-  }, [matchTournament, tournaments, matchId]);
+  }, [categories]);
 
   // Handle Login Form Submit
   const handleFormLogin = (e) => {
@@ -153,18 +138,72 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     }
   };
 
+  const handleMatchCategoryChange = (catId) => {
+    setMatchCategoryId(catId);
+    if (catId) {
+      const filteredTours = tournaments.filter(t => t.categoryId === catId);
+      setMatchTournament(filteredTours.length > 0 ? filteredTours[0].id : '');
+      
+      const filteredTeams = teams.filter(t => t.categoryId === catId);
+      if (filteredTeams.length > 0) {
+        setMatchHomeTeam(filteredTeams[0].id);
+        setMatchAwayTeam(filteredTeams.length > 1 ? filteredTeams[1].id : filteredTeams[0].id);
+      } else {
+        setMatchHomeTeam('');
+        setMatchAwayTeam('');
+      }
+    } else {
+      setMatchTournament('');
+      setMatchHomeTeam('');
+      setMatchAwayTeam('');
+    }
+  };
+
   // Handle Match Submit (Add or Edit Details)
   const handleMatchSubmit = (e) => {
     e.preventDefault();
     setMatchError('');
     setMatchSuccess('');
 
+    if (!matchCategoryId) {
+      setMatchError('La categoría del partido es obligatoria.');
+      return;
+    }
+
+    if (!matchTournament) {
+      setMatchError('El torneo es obligatorio.');
+      return;
+    }
+
+    if (!matchHomeTeam || !matchAwayTeam) {
+      setMatchError('Ambos equipos son obligatorios.');
+      return;
+    }
+
     if (matchHomeTeam === matchAwayTeam) {
       setMatchError('El equipo local y el equipo visitante no pueden ser el mismo.');
       return;
     }
 
-    const resolvedCategoryId = matchCategoryId || tournaments.find(t => t.id === matchTournament)?.categoryId || '';
+    // Verify categories match
+    const homeTeam = teams.find(t => t.id === matchHomeTeam);
+    const awayTeam = teams.find(t => t.id === matchAwayTeam);
+    const selectedTour = tournaments.find(t => t.id === matchTournament);
+
+    if (!homeTeam || !awayTeam || !selectedTour) {
+      setMatchError('Equipos o torneo no válidos.');
+      return;
+    }
+
+    if (homeTeam.categoryId !== matchCategoryId || awayTeam.categoryId !== matchCategoryId) {
+      setMatchError('Ambos equipos deben pertenecer a la categoría seleccionada.');
+      return;
+    }
+
+    if (selectedTour.categoryId !== matchCategoryId) {
+      setMatchError('El torneo debe pertenecer a la categoría seleccionada.');
+      return;
+    }
 
     const payload = {
       tournamentId: matchTournament,
@@ -174,7 +213,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       awayTeamId: matchAwayTeam,
       status: matchStatus,
       comments: matchComments,
-      categoryId: resolvedCategoryId
+      categoryId: matchCategoryId
     };
 
     if (matchId) {
@@ -204,6 +243,9 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setMatchComments('');
     setMatchStatus('scheduled');
     setMatchCategoryId('');
+    setMatchTournament('');
+    setMatchHomeTeam('');
+    setMatchAwayTeam('');
   };
 
   // Handle Results Form Submit (Score Capture)
@@ -242,6 +284,11 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setTeamSuccess('');
     setTeamError('');
 
+    if (!teamCategoryId) {
+      setTeamError('La categoría es obligatoria.');
+      return;
+    }
+
     const playerList = teamPlayersStr
       .split(',')
       .map(p => p.trim())
@@ -252,7 +299,8 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       logo: teamLogo,
       captainName: teamCaptain,
       captainPhone: teamPhone,
-      players: playerList
+      players: playerList,
+      categoryId: teamCategoryId
     };
 
     if (teamId) {
@@ -283,6 +331,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setTeamPhone('');
     setTeamPlayersStr('');
     setTeamLogo('⚽');
+    setTeamCategoryId(categories.length > 0 ? categories[0].id : '');
   };
 
   const handleLoadEditTeam = (team) => {
@@ -292,6 +341,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setTeamCaptain(team.captainName || '');
     setTeamPhone(team.captainPhone || '');
     setTeamPlayersStr(team.players ? team.players.join(', ') : '');
+    setTeamCategoryId(team.categoryId || '');
     setTeamSuccess('');
     setTeamError('');
   };
@@ -583,26 +633,27 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">Torneo</label>
-                  <select value={matchTournament} onChange={(e) => setMatchTournament(e.target.value)} className="form-select" required>
-                    {tournaments.map(t => {
-                      const cat = categories.find(c => c.id === t.categoryId)?.name || t.category || '';
-                      return (
-                        <option key={t.id} value={t.id}>
-                          {t.name} {cat ? `(${cat})` : ''}
-                        </option>
-                      );
-                    })}
+                  <label className="form-label">Categoría del Partido *</label>
+                  <select value={matchCategoryId} onChange={(e) => handleMatchCategoryChange(e.target.value)} className="form-select" required>
+                    <option value="">-- Seleccionar Categoría --</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Categoría del Partido</label>
-                  <select value={matchCategoryId} onChange={(e) => setMatchCategoryId(e.target.value)} className="form-select" required>
-                    <option value="">-- Seleccionar Categoría --</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <label className="form-label">Torneo *</label>
+                  <select 
+                    value={matchTournament} 
+                    onChange={(e) => setMatchTournament(e.target.value)} 
+                    className="form-select" 
+                    disabled={!matchCategoryId}
+                    required
+                  >
+                    <option value="">{matchCategoryId ? '-- Seleccionar Torneo --' : 'Selecciona una categoría primero'}</option>
+                    {tournaments.filter(t => t.categoryId === matchCategoryId).map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
                   </select>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Por defecto toma la categoría del torneo seleccionado.</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -620,15 +671,33 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr', gap: '12px' }}>
                   <div className="form-group">
-                    <label className="form-label">Equipo Local</label>
-                    <select value={matchHomeTeam} onChange={(e) => setMatchHomeTeam(e.target.value)} className="form-select" required>
-                      {teams.map(t => <option key={t.id} value={t.id}>{t.logo} {t.name}</option>)}
+                    <label className="form-label">Equipo Local *</label>
+                    <select 
+                      value={matchHomeTeam} 
+                      onChange={(e) => setMatchHomeTeam(e.target.value)} 
+                      className="form-select" 
+                      disabled={!matchCategoryId}
+                      required
+                    >
+                      <option value="">{matchCategoryId ? '-- Seleccionar Local --' : 'Selecciona categoría primero'}</option>
+                      {teams.filter(t => t.categoryId === matchCategoryId).map(t => (
+                        <option key={t.id} value={t.id}>{t.logo} {t.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Equipo Visitante</label>
-                    <select value={matchAwayTeam} onChange={(e) => setMatchAwayTeam(e.target.value)} className="form-select" required>
-                      {teams.map(t => <option key={t.id} value={t.id}>{t.logo} {t.name}</option>)}
+                    <label className="form-label">Equipo Visitante *</label>
+                    <select 
+                      value={matchAwayTeam} 
+                      onChange={(e) => setMatchAwayTeam(e.target.value)} 
+                      className="form-select" 
+                      disabled={!matchCategoryId}
+                      required
+                    >
+                      <option value="">{matchCategoryId ? '-- Seleccionar Visitante --' : 'Selecciona categoría primero'}</option>
+                      {teams.filter(t => t.categoryId === matchCategoryId).map(t => (
+                        <option key={t.id} value={t.id}>{t.logo} {t.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -949,6 +1018,21 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   />
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label">Categoría *</label>
+                  <select 
+                    value={teamCategoryId} 
+                    onChange={(e) => setTeamCategoryId(e.target.value)} 
+                    className="form-select" 
+                    required
+                  >
+                    <option value="">-- Seleccionar Categoría --</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Escudo / Logo (Emoji)</label>
@@ -1027,7 +1111,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{team.name}</div>
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            Capitán: {team.captainName || 'Sin asignar'}
+                            Capitán: {team.captainName || 'Sin asignar'} | Cat: <strong>{categories.find(c => c.id === team.categoryId)?.name || 'Sin categoría'}</strong>
                           </div>
                         </div>
                       </div>
