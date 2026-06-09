@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import MatchCard from '../components/MatchCard';
-import { Search, Calendar, MapPin, Trophy, EyeOff } from 'lucide-react';
+import { Search, Calendar, MapPin, Trophy, EyeOff, Award } from 'lucide-react';
 
 const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
-  const { matches, tournaments, fields } = useDatabase();
+  const { matches, tournaments, fields, categories } = useDatabase();
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
   const [selectedTournament, setSelectedTournament] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   // Get unique dates from matches to allow quick dropdown filter
   const uniqueDates = [...new Set(matches.map(m => m.dateTime.split('T')[0]))].sort();
 
-  // Filter matches: only display matches that are NOT finished, or display all matches except finished?
-  // Actually, standard "Schedule" shows upcoming matches (scheduled, live, postponed, cancelled).
-  // Matches with 'finished' status should ideally go to "Results" tab. Let's make "Schedule" filter out 'finished' by default, but allow toggling or just show all non-finished.
-  // Wait, let's show all non-finished matches (scheduled, live, postponed, cancelled) in Schedule.
+  // Filter matches: only display matches that are NOT finished
   const scheduleMatches = matches.filter(m => m.status !== 'finished');
 
   const filteredMatches = scheduleMatches.filter(match => {
     // 1. Search by team name
-    const homeTeamName = match.homeTeamId; // We map to names in logic
     const { teams } = useDatabase();
     const homeTeam = teams.find(t => t.id === match.homeTeamId)?.name.toLowerCase() || '';
     const awayTeam = teams.find(t => t.id === match.awayTeamId)?.name.toLowerCase() || '';
@@ -39,7 +36,11 @@ const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
     // 4. Filter by date
     const matchesDate = !selectedDate || match.dateTime.startsWith(selectedDate);
 
-    return matchesSearch && matchesField && matchesTournament && matchesDate;
+    // 5. Filter by category
+    const matchCategoryId = match.categoryId || tournaments.find(t => t.id === match.tournamentId)?.categoryId;
+    const matchesCategory = selectedCategory === 'all' || matchCategoryId === selectedCategory;
+
+    return matchesSearch && matchesField && matchesTournament && matchesDate && matchesCategory;
   }).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)); // Sort chronologically
 
   const handleEditRedirect = (match) => {
@@ -79,9 +80,14 @@ const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
         {/* Filters Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
           <style>{`
-            @media (min-width: 640px) {
+            @media (min-width: 768px) {
               .filters-grid {
-                grid-template-columns: repeat(3, 1fr) !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+              }
+            }
+            @media (min-width: 640px) and (max-width: 767px) {
+              .filters-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
               }
             }
           `}</style>
@@ -99,6 +105,22 @@ const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
                 <option value="all">Todos los Torneos</option>
                 {tournaments.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Filter */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.75rem' }}><Award size={12} /> Categoría</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="form-select"
+                style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+              >
+                <option value="all">Todas las Categorías</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -153,7 +175,7 @@ const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
           </span>
           <button 
             className="btn-outline" 
-            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); }}
+            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); setSelectedCategory('all'); }}
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}
           >
             Limpiar filtros
@@ -161,7 +183,6 @@ const Schedule = ({ setCurrentTab, setSelectedEditMatch }) => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* List grouped by date */}
           {filteredMatches.map(match => (
             <MatchCard key={match.id} match={match} onEditClick={handleEditRedirect} />
           ))}

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import { Trophy, Calendar, Award, CheckCircle, Info } from 'lucide-react';
 
 const Tournaments = ({ setCurrentTab }) => {
-  const { tournaments, teams } = useDatabase();
+  const { tournaments, teams, categories } = useDatabase();
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -18,6 +19,10 @@ const Tournaments = ({ setCurrentTab }) => {
     }
   };
 
+  const filteredTournaments = tournaments.filter(t => {
+    return selectedCategory === 'all' || t.categoryId === selectedCategory;
+  });
+
   return (
     <div className="container animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -31,122 +36,151 @@ const Tournaments = ({ setCurrentTab }) => {
         </p>
       </div>
 
+      {/* FILTER PANEL */}
+      <div className="glass-panel" style={{ padding: '16px' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Award size={12} /> Filtrar por Categoría
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="form-select"
+            style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+          >
+            <option value="all">Todas las Categorías</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* TOURNAMENTS LIST */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {tournaments.map(t => {
-          // Preloaded mock details for specific tournaments
-          const isNocturno = t.id === '1';
-          const format = isNocturno ? 'Liga + Liguilla (Top 4)' : 'Fase de Grupos + Eliminación Directa';
-          const startDate = isNocturno ? '01 de Mayo, 2026' : '15 de Mayo, 2026';
-          
-          return (
-            <div key={t.id} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              {/* Row 1: Header & Status */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(16, 185, 129, 0.15))',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <Trophy size={20} style={{ color: 'var(--primary)' }} />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#fff', margin: 0 }}>
-                      {t.name}
-                    </h3>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Categoría: <strong>{t.category}</strong>
-                    </span>
-                  </div>
-                </div>
+        {filteredTournaments.length === 0 ? (
+          <div className="glass-panel" style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            No hay torneos registrados en esta categoría.
+          </div>
+        ) : (
+          filteredTournaments.map(t => {
+            // Preloaded mock details for specific tournaments
+            const isNocturno = t.id === '1';
+            const format = isNocturno ? 'Liga + Liguilla (Top 4)' : 'Fase de Grupos + Eliminación Directa';
+            const startDate = isNocturno ? '01 de Mayo, 2026' : '15 de Mayo, 2026';
+            
+            const categoryObj = categories.find(c => c.id === t.categoryId);
+            const categoryName = categoryObj ? categoryObj.name : t.category || 'Sin Categoría';
 
-                {getStatusBadge(t.status)}
-              </div>
-
-              {/* Row 2: Details Grid */}
-              <style>{`
-                @media (min-width: 640px) {
-                  .tournament-details-grid {
-                    grid-template-columns: repeat(3, 1fr) !important;
-                  }
-                }
-              `}</style>
-              <div className="tournament-details-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr',
-                gap: '12px',
-                backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Formato de Torneo</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)' }}>{format}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fecha de Inicio</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Calendar size={14} style={{ color: 'var(--secondary)' }} /> {startDate}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Puntuación</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Award size={14} style={{ color: 'var(--primary)' }} /> Victoria: {t.pointsConfig?.win || 3} pts | Empate: {t.pointsConfig?.draw || 1} pts
-                  </span>
-                </div>
-              </div>
-
-              {/* Row 3: Registered Teams list preview */}
-              <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CheckCircle size={14} style={{ color: 'var(--secondary)' }} /> Equipos Participantes ({teams.length})
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {teams.map(team => (
-                    <span key={team.id} style={{
-                      fontSize: '0.75rem',
-                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      padding: '3px 8px',
-                      color: 'var(--text-main)'
+            return (
+              <div key={t.id} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Row 1: Header & Status */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(16, 185, 129, 0.15))',
+                      border: '1px solid rgba(251, 191, 36, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}>
-                      {team.logo} {team.name}
-                    </span>
-                  ))}
+                      <Trophy size={20} style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#fff', margin: 0 }}>
+                        {t.name}
+                      </h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Categoría: <strong>{categoryName}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {getStatusBadge(t.status)}
                 </div>
-              </div>
 
-              {/* Row 4: Call to Actions */}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                <button
-                  onClick={() => setCurrentTab('standings')}
-                  className="btn-primary"
-                  style={{ flex: 1, padding: '8px 16px', fontSize: '0.85rem', justifyContent: 'center' }}
-                >
-                  <Trophy size={16} /> Ver Tabla de Posiciones
-                </button>
-                <button
-                  onClick={() => setCurrentTab('schedule')}
-                  className="btn-outline"
-                  style={{ flex: 1, padding: '8px 16px', fontSize: '0.85rem', justifyContent: 'center' }}
-                >
-                  Ver Calendario de Juegos
-                </button>
-              </div>
+                {/* Row 2: Details Grid */}
+                <style>{`
+                  @media (min-width: 640px) {
+                    .tournament-details-grid {
+                      grid-template-columns: repeat(3, 1fr) !important;
+                    }
+                  }
+                `}</style>
+                <div className="tournament-details-grid" style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Formato de Torneo</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)' }}>{format}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fecha de Inicio</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Calendar size={14} style={{ color: 'var(--secondary)' }} /> {startDate}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Puntuación</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Award size={14} style={{ color: 'var(--primary)' }} /> Victoria: {t.pointsConfig?.win || 3} pts | Empate: {t.pointsConfig?.draw || 1} pts
+                    </span>
+                  </div>
+                </div>
 
-            </div>
-          );
-        })}
+                {/* Row 3: Registered Teams list preview */}
+                <div>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle size={14} style={{ color: 'var(--secondary)' }} /> Equipos Participantes ({teams.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {teams.map(team => (
+                      <span key={team.id} style={{
+                        fontSize: '0.75rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '6px',
+                        padding: '3px 8px',
+                        color: 'var(--text-main)'
+                      }}>
+                        {team.logo} {team.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Row 4: Call to Actions */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                  <button
+                    onClick={() => setCurrentTab('standings')}
+                    className="btn-primary"
+                    style={{ flex: 1, padding: '8px 16px', fontSize: '0.85rem', justifyContent: 'center' }}
+                  >
+                    <Trophy size={16} /> Ver Tabla de Posiciones
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('schedule')}
+                    className="btn-outline"
+                    style={{ flex: 1, padding: '8px 16px', fontSize: '0.85rem', justifyContent: 'center' }}
+                  >
+                    Ver Calendario de Juegos
+                  </button>
+                </div>
+
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* QUICK RULES CORNER */}

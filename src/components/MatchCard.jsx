@@ -3,12 +3,16 @@ import { useDatabase } from '../context/DatabaseContext';
 import { Share2, Clock, MapPin, Trophy } from 'lucide-react';
 
 const MatchCard = ({ match, onEditClick }) => {
-  const { teams, tournaments, fields, currentRole } = useDatabase();
+  const { teams, tournaments, fields, currentRole, categories } = useDatabase();
   
   const homeTeam = teams.find(t => t.id === match.homeTeamId) || { name: 'Desconocido', logo: '⚽' };
   const awayTeam = teams.find(t => t.id === match.awayTeamId) || { name: 'Desconocido', logo: '⚽' };
-  const tournament = tournaments.find(t => t.id === match.tournamentId) || { name: 'Torneo', category: '' };
+  const tournament = tournaments.find(t => t.id === match.tournamentId) || { name: 'Torneo', categoryId: '', category: '' };
   const field = fields.find(f => f.id === match.fieldId) || { name: 'Cancha General' };
+  
+  // Resolve Category Name
+  const matchCategoryId = match.categoryId || tournament.categoryId;
+  const matchCategory = categories.find(c => c.id === matchCategoryId)?.name || tournament.category || 'Sin Categoría';
   
   const isCanEdit = currentRole === 'admin' || currentRole === 'auxiliar';
 
@@ -53,7 +57,7 @@ const MatchCard = ({ match, onEditClick }) => {
     let bodyText = '';
     
     const fieldName = field.name;
-    const tournamentName = `${tournament.name} (${tournament.category})`;
+    const tournamentName = `${tournament.name} (${matchCategory})`;
 
     if (match.status === 'finished') {
       headerText += '🏆 *RESULTADO OFICIAL* 🏆\n';
@@ -103,7 +107,7 @@ _${match.comments || '¡Ven a apoyar a tu equipo favorito!'}_
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
           <Trophy size={14} style={{ color: 'var(--primary)' }} />
-          <span>{tournament.name} • {tournament.category}</span>
+          <span>{tournament.name} • {matchCategory}</span>
         </div>
         {getStatusBadge(match.status)}
       </div>

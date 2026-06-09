@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import StandingsTable from '../components/StandingsTable';
 import { Award } from 'lucide-react';
 
 const Standings = () => {
-  const { tournaments, getStandings } = useDatabase();
+  const { tournaments, getStandings, categories } = useDatabase();
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   // Set first tournament as active by default if available
-  const [activeTournamentId, setActiveTournamentId] = useState(
-    tournaments.length > 0 ? tournaments[0].id : ''
-  );
+  const [activeTournamentId, setActiveTournamentId] = useState('');
+
+  const filteredTournaments = tournaments.filter(t => {
+    return selectedCategory === 'all' || t.categoryId === selectedCategory;
+  });
+
+  // Automatically select a valid tournament when the selected category changes
+  useEffect(() => {
+    if (filteredTournaments.length > 0) {
+      const isValid = filteredTournaments.some(t => t.id === activeTournamentId);
+      if (!isValid) {
+        setActiveTournamentId(filteredTournaments[0].id);
+      }
+    } else {
+      setActiveTournamentId('');
+    }
+  }, [selectedCategory, tournaments, activeTournamentId]);
 
   const activeTournament = tournaments.find(t => t.id === activeTournamentId);
   const standings = activeTournamentId ? getStandings(activeTournamentId) : [];
@@ -27,34 +42,59 @@ const Standings = () => {
         </p>
       </div>
 
+      {/* FILTER PANEL */}
+      <div className="glass-panel" style={{ padding: '16px' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Award size={12} /> Filtrar por Categoría
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="form-select"
+            style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+          >
+            <option value="all">Todas las Categorías</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* TOURNAMENT TABS */}
-      {tournaments.length === 0 ? (
+      {filteredTournaments.length === 0 ? (
         <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          No hay torneos activos para mostrar posiciones.
+          No hay torneos activos para mostrar posiciones en esta categoría.
         </div>
       ) : (
         <>
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
-            {tournaments.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTournamentId(t.id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: activeTournamentId === t.id ? '2px solid var(--secondary)' : '2px solid transparent',
-                  color: activeTournamentId === t.id ? 'var(--secondary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '10px 16px',
-                  fontWeight: '600',
-                  fontSize: '0.85rem',
-                  whiteSpace: 'nowrap',
-                  transition: 'color 0.2s, border-color 0.2s'
-                }}
-              >
-                {t.name} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '400' }}>({t.category})</span>
-              </button>
-            ))}
+            {filteredTournaments.map(t => {
+              const categoryObj = categories.find(c => c.id === t.categoryId);
+              const categoryName = categoryObj ? categoryObj.name : t.category || 'Sin Categoría';
+              
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTournamentId(t.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: activeTournamentId === t.id ? '2px solid var(--secondary)' : '2px solid transparent',
+                    color: activeTournamentId === t.id ? 'var(--secondary)' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '10px 16px',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    whiteSpace: 'nowrap',
+                    transition: 'color 0.2s, border-color 0.2s'
+                  }}
+                >
+                  {t.name} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '400' }}>({categoryName})</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* STANDINGS AND CAPTION */}

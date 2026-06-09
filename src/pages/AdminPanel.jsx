@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import { 
   Settings, Shield, Plus, Edit2, Check, X, Trash2, 
-  Calendar, Users, Trophy, Bell, CreditCard, Award, Play 
+  Calendar, Users, Trophy, Bell, CreditCard, Award, Play, Tag 
 } from 'lucide-react';
 
 const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
@@ -16,6 +16,12 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     fields,
     handleLogin,
     handleLogout,
+    
+    // Categories
+    categories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
     
     // CRUD Operations
     addMatch,
@@ -39,7 +45,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const [loginError, setLoginError] = useState('');
 
   // Active Admin Sub-tab
-  const [activeSubTab, setActiveSubTab] = useState('matches'); // matches, results, teams, tournaments, reservations, announcements
+  const [activeSubTab, setActiveSubTab] = useState('matches'); // matches, results, teams, tournaments, reservations, announcements, categories
 
   // MATCH FORM STATES
   const [matchId, setMatchId] = useState('');
@@ -50,6 +56,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const [matchAwayTeam, setMatchAwayTeam] = useState('');
   const [matchStatus, setMatchStatus] = useState('scheduled');
   const [matchComments, setMatchComments] = useState('');
+  const [matchCategoryId, setMatchCategoryId] = useState('');
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
 
@@ -74,10 +81,16 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   // TOURNAMENT FORM STATES
   const [tourId, setTourId] = useState(''); // Empty means create, filled means edit
   const [tourName, setTourName] = useState('');
-  const [tourCat, setTourCat] = useState('Varonil Libre');
+  const [tourCatId, setTourCatId] = useState('');
   const [tourStatus, setTourStatus] = useState('active');
   const [tourSuccess, setTourSuccess] = useState('');
   const [tourError, setTourError] = useState('');
+
+  // CATEGORY FORM STATES
+  const [catId, setCatId] = useState(''); // Empty means create, filled means edit
+  const [catName, setCatName] = useState('');
+  const [catSuccess, setCatSuccess] = useState('');
+  const [catError, setCatError] = useState('');
 
   // ANNOUNCEMENT FORM STATES
   const [annTitle, setAnnTitle] = useState('');
@@ -97,6 +110,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       setMatchAwayTeam(selectedEditMatch.awayTeamId);
       setMatchStatus(selectedEditMatch.status);
       setMatchComments(selectedEditMatch.comments || '');
+      setMatchCategoryId(selectedEditMatch.categoryId || '');
       setMatchSuccess('');
       setMatchError('');
       
@@ -114,7 +128,20 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       if (!matchHomeTeam) setMatchHomeTeam(teams[0].id);
       if (!matchAwayTeam) setMatchAwayTeam(teams[1].id);
     }
-  }, [tournaments, teams]);
+    if (categories.length > 0 && !tourCatId) {
+      setTourCatId(categories[0].id);
+    }
+  }, [tournaments, teams, categories]);
+
+  // Inherit category from tournament automatically when tournament changes (only when creating a new match)
+  useEffect(() => {
+    if (matchTournament && !matchId) {
+      const selectedTour = tournaments.find(t => t.id === matchTournament);
+      if (selectedTour) {
+        setMatchCategoryId(selectedTour.categoryId || '');
+      }
+    }
+  }, [matchTournament, tournaments, matchId]);
 
   // Handle Login Form Submit
   const handleFormLogin = (e) => {
@@ -137,6 +164,8 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       return;
     }
 
+    const resolvedCategoryId = matchCategoryId || tournaments.find(t => t.id === matchTournament)?.categoryId || '';
+
     const payload = {
       tournamentId: matchTournament,
       fieldId: matchField,
@@ -144,7 +173,8 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       homeTeamId: matchHomeTeam,
       awayTeamId: matchAwayTeam,
       status: matchStatus,
-      comments: matchComments
+      comments: matchComments,
+      categoryId: resolvedCategoryId
     };
 
     if (matchId) {
@@ -173,6 +203,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setSelectedEditMatch(null);
     setMatchComments('');
     setMatchStatus('scheduled');
+    setMatchCategoryId('');
   };
 
   // Handle Results Form Submit (Score Capture)
@@ -271,9 +302,11 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     setTourSuccess('');
     setTourError('');
 
+    const selectedCategoryObj = categories.find(c => c.id === tourCatId);
     const payload = {
       name: tourName,
-      category: tourCat,
+      categoryId: tourCatId,
+      category: selectedCategoryObj ? selectedCategoryObj.name : '',
       status: tourStatus
     };
 
@@ -301,17 +334,65 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const handleResetTourForm = () => {
     setTourId('');
     setTourName('');
-    setTourCat('Varonil Libre');
+    setTourCatId(categories.length > 0 ? categories[0].id : '');
     setTourStatus('active');
   };
 
   const handleLoadEditTour = (tour) => {
     setTourId(tour.id);
     setTourName(tour.name);
-    setTourCat(tour.category);
+    setTourCatId(tour.categoryId || (categories.find(c => c.name === tour.category)?.id || ''));
     setTourStatus(tour.status || 'active');
     setTourSuccess('');
     setTourError('');
+  };
+
+  // Handle Category Create / Edit
+  const handleCategorySubmit = (e) => {
+    e.preventDefault();
+    setCatSuccess('');
+    setCatError('');
+
+    if (!catName.trim()) {
+      setCatError('El nombre de la categoría es requerido.');
+      return;
+    }
+
+    const payload = {
+      name: catName.trim()
+    };
+
+    if (catId) {
+      // Update
+      const res = updateCategory(catId, payload);
+      if (res.success) {
+        setCatSuccess('Categoría actualizada exitosamente.');
+        handleResetCatForm();
+      } else {
+        setCatError(res.error || 'Error al actualizar la categoría.');
+      }
+    } else {
+      // Create
+      const res = addCategory(payload);
+      if (res.success) {
+        setCatSuccess('Categoría creada exitosamente.');
+        handleResetCatForm();
+      } else {
+        setCatError(res.error || 'Error al crear la categoría.');
+      }
+    }
+  };
+
+  const handleResetCatForm = () => {
+    setCatId('');
+    setCatName('');
+  };
+
+  const handleLoadEditCat = (cat) => {
+    setCatId(cat.id);
+    setCatName(cat.name);
+    setCatSuccess('');
+    setCatError('');
   };
 
   // Handle Announcement Create
@@ -399,14 +480,19 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   }
 
   // Active sub-tabs configurations
-  const subTabs = [
+  const allSubTabs = [
     { id: 'matches', label: 'Partidos / Rol', icon: Calendar },
     { id: 'results', label: 'Resultados', icon: Award },
     { id: 'reservations', label: 'Reservaciones', icon: CreditCard },
     { id: 'teams', label: 'Equipos', icon: Users },
     { id: 'tournaments', label: 'Torneos', icon: Trophy },
+    { id: 'categories', label: 'Categorías', icon: Tag },
     { id: 'announcements', label: 'Avisos', icon: Bell }
   ];
+
+  const subTabs = currentRole === 'auxiliar'
+    ? allSubTabs.filter(tab => tab.id !== 'announcements')
+    : allSubTabs;
 
   return (
     <div className="container animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -439,6 +525,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 handleResetMatchForm();
                 handleResetTeamForm();
                 handleResetTourForm();
+                handleResetCatForm();
                 setSelectedResultMatchId('');
               }}
               style={{
@@ -498,8 +585,24 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 <div className="form-group">
                   <label className="form-label">Torneo</label>
                   <select value={matchTournament} onChange={(e) => setMatchTournament(e.target.value)} className="form-select" required>
-                    {tournaments.map(t => <option key={t.id} value={t.id}>{t.name} ({t.category})</option>)}
+                    {tournaments.map(t => {
+                      const cat = categories.find(c => c.id === t.categoryId)?.name || t.category || '';
+                      return (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {cat ? `(${cat})` : ''}
+                        </option>
+                      );
+                    })}
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Categoría del Partido</label>
+                  <select value={matchCategoryId} onChange={(e) => setMatchCategoryId(e.target.value)} className="form-select" required>
+                    <option value="">-- Seleccionar Categoría --</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Por defecto toma la categoría del torneo seleccionado.</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -568,6 +671,9 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   {matches.sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime)).map(match => {
                     const hTeam = teams.find(t => t.id === match.homeTeamId) || { name: 'Local' };
                     const aTeam = teams.find(t => t.id === match.awayTeamId) || { name: 'Visitante' };
+                    const mTour = tournaments.find(t => t.id === match.tournamentId) || { categoryId: '', category: '' };
+                    const mCatId = match.categoryId || mTour.categoryId;
+                    const mCatName = categories.find(c => c.id === mCatId)?.name || mTour.category || 'Sin Categoría';
                     
                     return (
                       <div key={match.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -576,7 +682,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                             {hTeam.name} vs {aTeam.name}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                            {new Date(match.dateTime).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} | {new Date(match.dateTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} hrs
+                            {new Date(match.dateTime).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} | {new Date(match.dateTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} hrs | Cat: <strong>{mCatName}</strong>
                           </div>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
                             <span className="badge" style={{ padding: '2px 6px', fontSize: '0.6rem' }}>
@@ -600,18 +706,20 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                           >
                             <Edit2 size={12} />
                           </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm('¿Seguro que deseas eliminar este partido?')) {
-                                deleteMatch(match.id);
-                              }
-                            }}
-                            className="btn-outline"
-                            style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
-                            title="Eliminar"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {currentRole === 'admin' && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm('¿Seguro que deseas eliminar este partido?')) {
+                                  deleteMatch(match.id);
+                                }
+                              }}
+                              className="btn-outline"
+                              style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -809,13 +917,14 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 }
               }
             `}</style>
-            <div className="teams-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <div className={currentRole === 'admin' ? "teams-admin-layout" : ""} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
               
               {/* Add/Edit Team form */}
-              <form onSubmit={handleTeamSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                  {teamId ? '✏️ Editar Datos de Equipo' : '➕ Registrar Nuevo Equipo'}
-                </h3>
+              {currentRole === 'admin' && (
+                <form onSubmit={handleTeamSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                    {teamId ? '✏️ Editar Datos de Equipo' : '➕ Registrar Nuevo Equipo'}
+                  </h3>
 
                 {teamSuccess && (
                   <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
@@ -902,6 +1011,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   )}
                 </div>
               </form>
+              )}
 
               {/* Roster list with Edit & Delete */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -921,29 +1031,31 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={() => handleLoadEditTeam(team)}
-                          className="btn-outline"
-                          style={{ padding: '6px', borderRadius: '6px' }}
-                          title="Editar Equipo"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`¿Seguro que deseas eliminar a ${team.name}?`)) {
-                              const res = deleteTeam(team.id);
-                              if (!res.success) alert(res.error);
-                            }
-                          }}
-                          className="btn-outline"
-                          style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
-                          title="Eliminar Equipo"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                      {currentRole === 'admin' && (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => handleLoadEditTeam(team)}
+                            className="btn-outline"
+                            style={{ padding: '6px', borderRadius: '6px' }}
+                            title="Editar Equipo"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Seguro que deseas eliminar a ${team.name}?`)) {
+                                const res = deleteTeam(team.id);
+                                if (!res.success) alert(res.error);
+                              }
+                            }}
+                            className="btn-outline"
+                            style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                            title="Eliminar Equipo"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -963,13 +1075,14 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 }
               }
             `}</style>
-            <div className="tournaments-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <div className={currentRole === 'admin' ? "tournaments-admin-layout" : ""} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
               
               {/* Form */}
-              <form onSubmit={handleTournamentSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                  {tourId ? '✏️ Editar Torneo' : '➕ Crear Nuevo Torneo'}
-                </h3>
+              {currentRole === 'admin' && (
+                <form onSubmit={handleTournamentSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                    {tourId ? '✏️ Editar Torneo' : '➕ Crear Nuevo Torneo'}
+                  </h3>
 
                 {tourSuccess && (
                   <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
@@ -996,12 +1109,10 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
                 <div className="form-group">
                   <label className="form-label">Categoría *</label>
-                  <select value={tourCat} onChange={(e) => setTourCat(e.target.value)} className="form-select" required>
-                    <option value="Varonil Libre">Varonil Libre</option>
-                    <option value="Femenil">Femenil</option>
-                    <option value="Veteranos">Veteranos</option>
-                    <option value="Femenil Libre">Femenil Libre</option>
-                    <option value="Infantil">Infantil</option>
+                  <select value={tourCatId} onChange={(e) => setTourCatId(e.target.value)} className="form-select" required>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -1027,6 +1138,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   )}
                 </div>
               </form>
+              )}
 
               {/* Tournament List with Edit & Delete */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1035,39 +1147,45 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {tournaments.map(t => (
-                    <div key={t.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{t.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          Cat: {t.category} | Estado: <strong>{t.status || 'active'}</strong>
+                  {tournaments.map(t => {
+                    const catObj = categories.find(c => c.id === t.categoryId);
+                    const catName = catObj ? catObj.name : t.category || 'Sin Categoría';
+                    return (
+                      <div key={t.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{t.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            Cat: {catName} | Estado: <strong>{t.status || 'active'}</strong>
+                          </div>
                         </div>
+                        {currentRole === 'admin' && (
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => handleLoadEditTour(t)}
+                              className="btn-outline"
+                              style={{ padding: '6px', borderRadius: '6px' }}
+                              title="Editar Torneo"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`¿Seguro que deseas eliminar el torneo ${t.name}?`)) {
+                                  const res = deleteTournament(t.id);
+                                  if (!res.success) alert(res.error);
+                                }
+                              }}
+                              className="btn-outline"
+                              style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                              title="Eliminar Torneo"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={() => handleLoadEditTour(t)}
-                          className="btn-outline"
-                          style={{ padding: '6px', borderRadius: '6px' }}
-                          title="Editar Torneo"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`¿Seguro que deseas eliminar el torneo ${t.name}?`)) {
-                              const res = deleteTournament(t.id);
-                              if (!res.success) alert(res.error);
-                            }
-                          }}
-                          className="btn-outline"
-                          style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
-                          title="Eliminar Torneo"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1170,19 +1288,22 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                                 </button>
                               </>
                             ) : (
-                              // Delete request from list
-                              <button
-                                onClick={() => {
-                                  if (window.confirm('¿Deseas eliminar esta solicitud de reservación?')) {
-                                    deleteReservation(res.id);
-                                  }
-                                }}
-                                className="btn-outline"
-                                style={{ padding: '6px 12px', fontSize: '0.72rem', borderRadius: '6px', color: 'var(--text-muted)' }}
-                              >
-                                <Trash2 size={12} /> Eliminar
-                              </button>
+                              // Delete request from list (Admin only)
+                              currentRole === 'admin' ? (
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm('¿Deseas eliminar esta solicitud de reservación?')) {
+                                      deleteReservation(res.id);
+                                    }
+                                  }}
+                                  className="btn-outline"
+                                  style={{ padding: '6px 12px', fontSize: '0.72rem', borderRadius: '6px', color: 'var(--text-muted)' }}
+                                >
+                                  <Trash2 size={12} /> Eliminar
+                                </button>
+                              ) : null
                             )}
+
                           </div>
                         </div>
 
@@ -1192,6 +1313,114 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: CATEGORIES */}
+        {activeSubTab === 'categories' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <style>{`
+              @media (min-width: 1024px) {
+                .categories-admin-layout {
+                  grid-template-columns: 1fr 1.2fr !important;
+                }
+              }
+            `}</style>
+            <div className={currentRole === 'admin' ? "categories-admin-layout" : ""} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              
+              {/* Form (Admin only) */}
+              {currentRole === 'admin' && (
+                <form onSubmit={handleCategorySubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                    {catId ? '✏️ Editar Categoría' : '➕ Crear Nueva Categoría'}
+                  </h3>
+
+                  {catSuccess && (
+                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                      {catSuccess}
+                    </div>
+                  )}
+                  {catError && (
+                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                      {catError}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label className="form-label">Nombre de la Categoría *</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Femenil Libre" 
+                      value={catName} 
+                      onChange={(e) => setCatName(e.target.value)} 
+                      className="form-input" 
+                      required 
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                      {catId ? 'Guardar Cambios' : 'Crear Categoría'}
+                    </button>
+                    {catId && (
+                      <button type="button" onClick={handleResetCatForm} className="btn-outline" style={{ border: 'none' }}>
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
+
+              {/* List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
+                  Categorías Registradas ({categories.length})
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+                  {categories.map(cat => (
+                    <div key={cat.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{cat.name}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          ID: {cat.id}
+                        </div>
+                      </div>
+                      {currentRole === 'admin' && (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => handleLoadEditCat(cat)}
+                            className="btn-outline"
+                            style={{ padding: '6px', borderRadius: '6px' }}
+                            title="Editar Categoría"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Seguro que deseas eliminar la categoría ${cat.name}?`)) {
+                                const res = deleteCategory(cat.id);
+                                if (!res.success) {
+                                  alert(res.error);
+                                } else {
+                                  setCatSuccess('Categoría eliminada con éxito.');
+                                }
+                              }
+                            }}
+                            className="btn-outline"
+                            style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                            title="Eliminar Categoría"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 

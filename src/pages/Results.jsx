@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import MatchCard from '../components/MatchCard';
-import { Search, Calendar, MapPin, Trophy, EyeOff } from 'lucide-react';
+import { Search, Calendar, MapPin, Trophy, EyeOff, Award } from 'lucide-react';
 
 const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
-  const { matches, tournaments, fields } = useDatabase();
+  const { matches, tournaments, fields, categories } = useDatabase();
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
   const [selectedTournament, setSelectedTournament] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Finished matches only
   const finishedMatches = matches.filter(m => m.status === 'finished');
@@ -35,7 +36,11 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
     // 4. Filter by date
     const matchesDate = !selectedDate || match.dateTime.startsWith(selectedDate);
 
-    return matchesSearch && matchesField && matchesTournament && matchesDate;
+    // 5. Filter by category
+    const matchCategoryId = match.categoryId || tournaments.find(t => t.id === match.tournamentId)?.categoryId;
+    const matchesCategory = selectedCategory === 'all' || matchCategoryId === selectedCategory;
+
+    return matchesSearch && matchesField && matchesTournament && matchesDate && matchesCategory;
   }).sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime)); // Sort newest results first
 
   const handleEditRedirect = (match) => {
@@ -75,9 +80,14 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
         {/* Filters Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
           <style>{`
-            @media (min-width: 640px) {
+            @media (min-width: 768px) {
               .filters-grid {
-                grid-template-columns: repeat(3, 1fr) !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+              }
+            }
+            @media (min-width: 640px) and (max-width: 767px) {
+              .filters-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
               }
             }
           `}</style>
@@ -95,6 +105,22 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
                 <option value="all">Todos los Torneos</option>
                 {tournaments.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Filter */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.75rem' }}><Award size={12} /> Categoría</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="form-select"
+                style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+              >
+                <option value="all">Todas las Categorías</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -149,7 +175,7 @@ const Results = ({ setCurrentTab, setSelectedEditMatch }) => {
           </span>
           <button 
             className="btn-outline" 
-            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); }}
+            onClick={() => { setSearchTerm(''); setSelectedField('all'); setSelectedTournament('all'); setSelectedDate(''); setSelectedCategory('all'); }}
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}
           >
             Limpiar filtros

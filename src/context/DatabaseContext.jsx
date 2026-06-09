@@ -3,6 +3,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const DatabaseContext = createContext();
 
 // Default Pre-loaded Mock Data
+const DEFAULT_CATEGORIES = [
+  { id: '1', name: 'Varonil Libre' },
+  { id: '2', name: 'Femenil Libre' },
+  { id: '3', name: 'Mixto' },
+  { id: '4', name: 'Infantil' },
+  { id: '5', name: 'Juvenil' },
+  { id: '6', name: 'Veteranos' },
+  { id: '7', name: 'Infantil 8-10' },
+  { id: '8', name: 'Infantil 11-13' },
+  { id: '9', name: 'Infantil 14-16' }
+];
+
 const DEFAULT_TEAMS = [
   { id: '1', name: 'Atlético Cuautepec', logo: '⚽', captainName: 'Ricardo García', captainPhone: '5512345678', players: ['Carlos Ortiz', 'Javier López', 'Mauricio Pineda', 'Roberto Solís', 'Daniel Vega', 'Fabián Ruiz'] },
   { id: '2', name: 'Real Azteca', logo: '👑', captainName: 'Hugo Sánchez', captainPhone: '5587654321', players: ['Luis Mendoza', 'Ángel Cruz', 'Esteban Marín', 'Gabriel Soto', 'Pedro Damián', 'Arturo Ortiz'] },
@@ -17,8 +29,8 @@ const DEFAULT_TEAMS = [
 ];
 
 const DEFAULT_TOURNAMENTS = [
-  { id: '1', name: 'Torneo Nocturno Azteca', category: 'Varonil Libre', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
-  { id: '2', name: 'Copa Brasil Cuautepec', category: 'Veteranos', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } }
+  { id: '1', name: 'Torneo Nocturno Azteca', categoryId: '1', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } },
+  { id: '2', name: 'Copa Brasil Cuautepec', categoryId: '6', status: 'active', pointsConfig: { win: 3, draw: 1, loss: 0 } }
 ];
 
 const DEFAULT_ANNOUNCEMENTS = [
@@ -30,26 +42,26 @@ const DEFAULT_ANNOUNCEMENTS = [
 // Seed matches around the current date (June 9, 2026)
 const DEFAULT_MATCHES = [
   // Finished Matches (Results)
-  { id: '1', tournamentId: '1', fieldId: '1', dateTime: '2026-06-05T19:00', homeTeamId: '1', awayTeamId: '2', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Excelente partido de ida.' },
-  { id: '2', tournamentId: '1', fieldId: '2', dateTime: '2026-06-05T20:00', homeTeamId: '3', awayTeamId: '4', homeScore: 5, awayScore: 3, status: 'finished', comments: 'Hat-trick de Ronaldinho.' },
-  { id: '3', tournamentId: '1', fieldId: '1', dateTime: '2026-06-06T19:00', homeTeamId: '5', awayTeamId: '6', homeScore: 2, awayScore: 2, status: 'finished', comments: 'Empate de último minuto.' },
-  { id: '4', tournamentId: '1', fieldId: '2', dateTime: '2026-06-06T20:00', homeTeamId: '7', awayTeamId: '8', homeScore: 1, awayScore: 4, status: 'finished', comments: 'Dominio absoluto de Guerreros.' },
+  { id: '1', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-05T19:00', homeTeamId: '1', awayTeamId: '2', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Excelente partido de ida.' },
+  { id: '2', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-05T20:00', homeTeamId: '3', awayTeamId: '4', homeScore: 5, awayScore: 3, status: 'finished', comments: 'Hat-trick de Ronaldinho.' },
+  { id: '3', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-06T19:00', homeTeamId: '5', awayTeamId: '6', homeScore: 2, awayScore: 2, status: 'finished', comments: 'Empate de último minuto.' },
+  { id: '4', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-06T20:00', homeTeamId: '7', awayTeamId: '8', homeScore: 1, awayScore: 4, status: 'finished', comments: 'Dominio absoluto de Guerreros.' },
   
-  { id: '5', tournamentId: '2', fieldId: '1', dateTime: '2026-06-07T18:00', homeTeamId: '9', awayTeamId: '10', homeScore: 4, awayScore: 1, status: 'finished', comments: 'Veteranos en acción.' },
-  { id: '6', tournamentId: '2', fieldId: '2', dateTime: '2026-06-07T19:00', homeTeamId: '3', awayTeamId: '5', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Juego muy reñido.' },
+  { id: '5', tournamentId: '2', categoryId: '6', fieldId: '1', dateTime: '2026-06-07T18:00', homeTeamId: '9', awayTeamId: '10', homeScore: 4, awayScore: 1, status: 'finished', comments: 'Veteranos en acción.' },
+  { id: '6', tournamentId: '2', categoryId: '6', fieldId: '2', dateTime: '2026-06-07T19:00', homeTeamId: '3', awayTeamId: '5', homeScore: 3, awayScore: 2, status: 'finished', comments: 'Juego muy reñido.' },
 
   // Live / In progress match
-  { id: '7', tournamentId: '1', fieldId: '1', dateTime: '2026-06-09T19:30', homeTeamId: '3', awayTeamId: '1', homeScore: 2, awayScore: 1, status: 'live', comments: 'Minuto 35, Joga Bonito domina.' },
+  { id: '7', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-09T19:30', homeTeamId: '3', awayTeamId: '1', homeScore: 2, awayScore: 1, status: 'live', comments: 'Minuto 35, Joga Bonito domina.' },
 
   // Scheduled Matches (Upcoming)
-  { id: '8', tournamentId: '1', fieldId: '1', dateTime: '2026-06-09T20:30', homeTeamId: '2', awayTeamId: '8', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Clásico de Cuautepec.' },
-  { id: '9', tournamentId: '1', fieldId: '2', dateTime: '2026-06-09T21:30', homeTeamId: '4', awayTeamId: '6', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Duelo por la permanencia.' },
-  { id: '10', tournamentId: '2', fieldId: '1', dateTime: '2026-06-10T19:00', homeTeamId: '7', awayTeamId: '9', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Copa veteranos jornada 4.' },
-  { id: '11', tournamentId: '1', fieldId: '2', dateTime: '2026-06-10T20:00', homeTeamId: '10', awayTeamId: '5', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Fútbol rápido de alta velocidad.' },
+  { id: '8', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-09T20:30', homeTeamId: '2', awayTeamId: '8', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Clásico de Cuautepec.' },
+  { id: '9', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-09T21:30', homeTeamId: '4', awayTeamId: '6', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Duelo por la permanencia.' },
+  { id: '10', tournamentId: '2', categoryId: '6', fieldId: '1', dateTime: '2026-06-10T19:00', homeTeamId: '7', awayTeamId: '9', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Copa veteranos jornada 4.' },
+  { id: '11', tournamentId: '1', categoryId: '1', fieldId: '2', dateTime: '2026-06-10T20:00', homeTeamId: '10', awayTeamId: '5', homeScore: null, awayScore: null, status: 'scheduled', comments: 'Fútbol rápido de alta velocidad.' },
 
   // Cancelled & Postponed
-  { id: '12', tournamentId: '1', fieldId: '1', dateTime: '2026-06-08T20:00', homeTeamId: '2', awayTeamId: '6', homeScore: null, awayScore: null, status: 'cancelled', comments: 'Cancelado por lluvia intensa.' },
-  { id: '13', tournamentId: '2', fieldId: '2', dateTime: '2026-06-08T19:00', homeTeamId: '8', awayTeamId: '10', homeScore: null, awayScore: null, status: 'postponed', comments: 'Reprogramado por acuerdo de capitanes.' }
+  { id: '12', tournamentId: '1', categoryId: '1', fieldId: '1', dateTime: '2026-06-08T20:00', homeTeamId: '2', awayTeamId: '6', homeScore: null, awayScore: null, status: 'cancelled', comments: 'Cancelado por lluvia intensa.' },
+  { id: '13', tournamentId: '2', categoryId: '6', fieldId: '2', dateTime: '2026-06-08T19:00', homeTeamId: '8', awayTeamId: '10', homeScore: null, awayScore: null, status: 'postponed', comments: 'Reprogramado por acuerdo de capitanes.' }
 ];
 
 const DEFAULT_RESERVATIONS = [
@@ -60,6 +72,11 @@ const DEFAULT_RESERVATIONS = [
 
 export const DatabaseProvider = ({ children }) => {
   // Load initial data from localStorage if exists, else seed defaults
+  const [categories, setCategories] = useState(() => {
+    const data = localStorage.getItem('jb_categories');
+    return data ? JSON.parse(data) : DEFAULT_CATEGORIES;
+  });
+
   const [teams, setTeams] = useState(() => {
     const data = localStorage.getItem('jb_teams');
     return data ? JSON.parse(data) : DEFAULT_TEAMS;
@@ -97,6 +114,10 @@ export const DatabaseProvider = ({ children }) => {
 
   // Synchronize with localStorage when state changes
   useEffect(() => {
+    localStorage.setItem('jb_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
     localStorage.setItem('jb_teams', JSON.stringify(teams));
   }, [teams]);
 
@@ -126,7 +147,7 @@ export const DatabaseProvider = ({ children }) => {
     if (!tournament) return [];
 
     const tournamentMatches = matches.filter(m => m.tournamentId === tournamentId && m.status === 'finished');
-    const tournamentTeams = teams; // All teams are available for simplify. You can also filter teams registered.
+    const tournamentTeams = teams; // All teams are available for simplify.
 
     const statsMap = {};
     tournamentTeams.forEach(team => {
@@ -198,11 +219,7 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   // Helper to check for match or reservation schedule collision
-  // Format targetDate: YYYY-MM-DD
-  // Format targetTime: HH:MM
   const checkCollision = (fieldId, dateStr, timeStr, durationHours = 1, excludeId = null) => {
-    // 1. Check against active matches (status live, scheduled, finished)
-    // Matches start at dateTime and last 1 hour
     const startTarget = new Date(`${dateStr}T${timeStr}`);
     const endTarget = new Date(startTarget.getTime() + durationHours * 60 * 60 * 1000);
 
@@ -219,11 +236,10 @@ export const DatabaseProvider = ({ children }) => {
 
     if (matchCollision) return 'match-collision';
 
-    // 2. Check against approved reservations
     const resCollision = reservations.some(res => {
       if (res.id === excludeId) return false;
       if (res.fieldId !== fieldId) return false;
-      if (res.status !== 'approved') return false; // Only active approved reservations block times
+      if (res.status !== 'approved') return false;
 
       const rStart = new Date(`${res.date}T${res.time}`);
       const rEnd = new Date(rStart.getTime() + res.duration * 60 * 60 * 1000);
@@ -236,8 +252,34 @@ export const DatabaseProvider = ({ children }) => {
     return null;
   };
 
-  // Business Logic Handlers
-  
+  // CATEGORIES CRUD
+  const addCategory = (catData) => {
+    const newCat = {
+      id: Date.now().toString(),
+      ...catData
+    };
+    setCategories(prev => [...prev, newCat]);
+    return { success: true, category: newCat };
+  };
+
+  const updateCategory = (id, updatedFields) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
+    return { success: true };
+  };
+
+  const deleteCategory = (id) => {
+    const hasTournaments = tournaments.some(t => t.categoryId === id);
+    const hasMatches = matches.some(m => m.categoryId === id);
+    if (hasTournaments || hasMatches) {
+      return { 
+        success: false, 
+        error: 'No se puede eliminar la categoría: está asociada a torneos o partidos activos.' 
+      };
+    }
+    setCategories(prev => prev.filter(c => c.id !== id));
+    return { success: true };
+  };
+
   // MATCHES
   const addMatch = (matchData) => {
     const datePart = matchData.dateTime.split('T')[0];
@@ -260,7 +302,6 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   const updateMatch = (id, updatedFields) => {
-    // If updating time or cancha, check collision
     if (updatedFields.dateTime || updatedFields.fieldId) {
       const match = matches.find(m => m.id === id);
       const newField = updatedFields.fieldId || match.fieldId;
@@ -304,7 +345,6 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   const deleteTeam = (id) => {
-    // Check if team is in matches
     const hasMatches = matches.some(m => m.homeTeamId === id || m.awayTeamId === id);
     if (hasMatches) {
       return { success: false, error: 'No se puede eliminar: el equipo tiene partidos registrados.' };
@@ -341,8 +381,6 @@ export const DatabaseProvider = ({ children }) => {
 
   // RESERVATIONS
   const addReservation = (resData) => {
-    // Auto check if collision. If so, create as pending anyway but user gets note that it is pending approval.
-    // However, if we approve directly (e.g. from admin panel), we check collision.
     const newRes = {
       id: Date.now().toString(),
       status: 'pending',
@@ -355,7 +393,6 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   const updateReservation = (id, updatedFields) => {
-    // If setting to 'approved', we must do collision checks
     if (updatedFields.status === 'approved') {
       const res = reservations.find(r => r.id === id);
       const targetField = updatedFields.fieldId || res.fieldId;
@@ -416,6 +453,7 @@ export const DatabaseProvider = ({ children }) => {
 
   return (
     <DatabaseContext.Provider value={{
+      categories,
       teams,
       tournaments,
       matches,
@@ -428,6 +466,9 @@ export const DatabaseProvider = ({ children }) => {
       checkCollision,
       
       // Operations
+      addCategory,
+      updateCategory,
+      deleteCategory,
       addMatch,
       updateMatch,
       deleteMatch,
