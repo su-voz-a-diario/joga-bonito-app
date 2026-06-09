@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useDatabase } from '../context/DatabaseContext';
-import { Settings, Shield, Plus, Edit2, Check, X, Trash2, Calendar, Users, Trophy, Bell, CreditCard } from 'lucide-react';
+import { 
+  Settings, Shield, Plus, Edit2, Check, X, Trash2, 
+  Calendar, Users, Trophy, Bell, CreditCard, Award, Play 
+} from 'lucide-react';
 
 const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const {
@@ -22,7 +25,8 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     updateTeam,
     deleteTeam,
     addTournament,
-    addReservation,
+    updateTournament,
+    deleteTournament,
     updateReservation,
     deleteReservation,
     addAnnouncement,
@@ -35,36 +39,47 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const [loginError, setLoginError] = useState('');
 
   // Active Admin Sub-tab
-  const [activeSubTab, setActiveSubTab] = useState('matches'); // matches, reservations, teams, tournaments, announcements
+  const [activeSubTab, setActiveSubTab] = useState('matches'); // matches, results, teams, tournaments, reservations, announcements
 
-  // Match Form States
+  // MATCH FORM STATES
   const [matchId, setMatchId] = useState('');
   const [matchTournament, setMatchTournament] = useState('');
   const [matchField, setMatchField] = useState('1');
   const [matchDateTime, setMatchDateTime] = useState('');
   const [matchHomeTeam, setMatchHomeTeam] = useState('');
   const [matchAwayTeam, setMatchAwayTeam] = useState('');
-  const [matchHomeScore, setMatchHomeScore] = useState('');
-  const [matchAwayScore, setMatchAwayScore] = useState('');
   const [matchStatus, setMatchStatus] = useState('scheduled');
   const [matchComments, setMatchComments] = useState('');
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
 
-  // Team Form States
+  // RESULTS FORM STATES
+  const [selectedResultMatchId, setSelectedResultMatchId] = useState('');
+  const [resultHomeScore, setResultHomeScore] = useState('');
+  const [resultAwayScore, setResultAwayScore] = useState('');
+  const [resultComments, setResultComments] = useState('');
+  const [resultSuccess, setResultSuccess] = useState('');
+  const [resultError, setResultError] = useState('');
+
+  // TEAM FORM STATES
+  const [teamId, setTeamId] = useState(''); // Empty means create, filled means edit
   const [teamName, setTeamName] = useState('');
   const [teamLogo, setTeamLogo] = useState('⚽');
   const [teamCaptain, setTeamCaptain] = useState('');
   const [teamPhone, setTeamPhone] = useState('');
   const [teamPlayersStr, setTeamPlayersStr] = useState('');
   const [teamSuccess, setTeamSuccess] = useState('');
+  const [teamError, setTeamError] = useState('');
 
-  // Tournament Form States
+  // TOURNAMENT FORM STATES
+  const [tourId, setTourId] = useState(''); // Empty means create, filled means edit
   const [tourName, setTourName] = useState('');
   const [tourCat, setTourCat] = useState('Varonil Libre');
+  const [tourStatus, setTourStatus] = useState('active');
   const [tourSuccess, setTourSuccess] = useState('');
+  const [tourError, setTourError] = useState('');
 
-  // Announcement Form States
+  // ANNOUNCEMENT FORM STATES
   const [annTitle, setAnnTitle] = useState('');
   const [annContent, setAnnContent] = useState('');
   const [annImportant, setAnnImportant] = useState(false);
@@ -80,10 +95,10 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       setMatchDateTime(selectedEditMatch.dateTime);
       setMatchHomeTeam(selectedEditMatch.homeTeamId);
       setMatchAwayTeam(selectedEditMatch.awayTeamId);
-      setMatchHomeScore(selectedEditMatch.homeScore !== null ? selectedEditMatch.homeScore : '');
-      setMatchAwayScore(selectedEditMatch.awayScore !== null ? selectedEditMatch.awayScore : '');
       setMatchStatus(selectedEditMatch.status);
       setMatchComments(selectedEditMatch.comments || '');
+      setMatchSuccess('');
+      setMatchError('');
       
       // Focus scroll or view
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -111,7 +126,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
     }
   };
 
-  // Handle Match Submit (Add or Edit)
+  // Handle Match Submit (Add or Edit Details)
   const handleMatchSubmit = (e) => {
     e.preventDefault();
     setMatchError('');
@@ -128,8 +143,6 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       dateTime: matchDateTime,
       homeTeamId: matchHomeTeam,
       awayTeamId: matchAwayTeam,
-      homeScore: matchHomeScore !== '' ? Number(matchHomeScore) : null,
-      awayScore: matchAwayScore !== '' ? Number(matchAwayScore) : null,
       status: matchStatus,
       comments: matchComments
     };
@@ -158,16 +171,45 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
   const handleResetMatchForm = () => {
     setMatchId('');
     setSelectedEditMatch(null);
-    setMatchHomeScore('');
-    setMatchAwayScore('');
     setMatchComments('');
     setMatchStatus('scheduled');
   };
 
-  // Handle Team Create
+  // Handle Results Form Submit (Score Capture)
+  const handleResultSubmit = (e) => {
+    e.preventDefault();
+    setResultError('');
+    setResultSuccess('');
+
+    if (resultHomeScore === '' || resultAwayScore === '') {
+      setResultError('Por favor introduce los goles de ambos equipos.');
+      return;
+    }
+
+    const payload = {
+      homeScore: Number(resultHomeScore),
+      awayScore: Number(resultAwayScore),
+      status: 'finished',
+      comments: resultComments || 'Partido finalizado.'
+    };
+
+    const res = updateMatch(selectedResultMatchId, payload);
+    if (res.success) {
+      setResultSuccess('Resultado oficial guardado. La tabla de posiciones se ha actualizado.');
+      setSelectedResultMatchId('');
+      setResultHomeScore('');
+      setResultAwayScore('');
+      setResultComments('');
+    } else {
+      setResultError(res.error || 'Error al guardar el marcador.');
+    }
+  };
+
+  // Handle Team Create / Edit
   const handleTeamSubmit = (e) => {
     e.preventDefault();
     setTeamSuccess('');
+    setTeamError('');
 
     const playerList = teamPlayersStr
       .split(',')
@@ -182,32 +224,94 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       players: playerList
     };
 
-    const res = addTeam(payload);
-    if (res.success) {
-      setTeamSuccess('Equipo registrado exitosamente.');
-      setTeamName('');
-      setTeamCaptain('');
-      setTeamPhone('');
-      setTeamPlayersStr('');
+    if (teamId) {
+      // Update Mode
+      const res = updateTeam(teamId, payload);
+      if (res.success) {
+        setTeamSuccess('Equipo actualizado exitosamente.');
+        handleResetTeamForm();
+      } else {
+        setTeamError(res.error || 'Error al actualizar equipo.');
+      }
+    } else {
+      // Create Mode
+      const res = addTeam(payload);
+      if (res.success) {
+        setTeamSuccess('Equipo registrado exitosamente.');
+        handleResetTeamForm();
+      } else {
+        setTeamError(res.error || 'Error al registrar equipo.');
+      }
     }
   };
 
-  // Handle Tournament Create
+  const handleResetTeamForm = () => {
+    setTeamId('');
+    setTeamName('');
+    setTeamCaptain('');
+    setTeamPhone('');
+    setTeamPlayersStr('');
+    setTeamLogo('⚽');
+  };
+
+  const handleLoadEditTeam = (team) => {
+    setTeamId(team.id);
+    setTeamName(team.name);
+    setTeamLogo(team.logo);
+    setTeamCaptain(team.captainName || '');
+    setTeamPhone(team.captainPhone || '');
+    setTeamPlayersStr(team.players ? team.players.join(', ') : '');
+    setTeamSuccess('');
+    setTeamError('');
+  };
+
+  // Handle Tournament Create / Edit
   const handleTournamentSubmit = (e) => {
     e.preventDefault();
     setTourSuccess('');
+    setTourError('');
 
     const payload = {
       name: tourName,
       category: tourCat,
-      status: 'active'
+      status: tourStatus
     };
 
-    const res = addTournament(payload);
-    if (res.success) {
-      setTourSuccess('Torneo creado exitosamente.');
-      setTourName('');
+    if (tourId) {
+      // Update
+      const res = updateTournament(tourId, payload);
+      if (res.success) {
+        setTourSuccess('Torneo actualizado exitosamente.');
+        handleResetTourForm();
+      } else {
+        setTourError(res.error || 'Error al actualizar el torneo.');
+      }
+    } else {
+      // Create
+      const res = addTournament(payload);
+      if (res.success) {
+        setTourSuccess('Torneo creado exitosamente.');
+        handleResetTourForm();
+      } else {
+        setTourError(res.error || 'Error al crear el torneo.');
+      }
     }
+  };
+
+  const handleResetTourForm = () => {
+    setTourId('');
+    setTourName('');
+    setTourCat('Varonil Libre');
+    setTourStatus('active');
+  };
+
+  const handleLoadEditTour = (tour) => {
+    setTourId(tour.id);
+    setTourName(tour.name);
+    setTourCat(tour.category);
+    setTourStatus(tour.status || 'active');
+    setTourSuccess('');
+    setTourError('');
   };
 
   // Handle Announcement Create
@@ -223,7 +327,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
     const res = addAnnouncement(payload);
     if (res.success) {
-      setAnnSuccess('Aviso publicado exitosamente en la pantalla de inicio.');
+      setAnnSuccess('Aviso publicado exitosamente.');
       setAnnTitle('');
       setAnnContent('');
       setAnnImportant(false);
@@ -296,7 +400,8 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
   // Active sub-tabs configurations
   const subTabs = [
-    { id: 'matches', label: 'Partidos', icon: Calendar },
+    { id: 'matches', label: 'Partidos / Rol', icon: Calendar },
+    { id: 'results', label: 'Resultados', icon: Award },
     { id: 'reservations', label: 'Reservaciones', icon: CreditCard },
     { id: 'teams', label: 'Equipos', icon: Users },
     { id: 'tournaments', label: 'Torneos', icon: Trophy },
@@ -329,7 +434,13 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
           return (
             <button
               key={tab.id}
-              onClick={() => { setActiveSubTab(tab.id); handleResetMatchForm(); }}
+              onClick={() => { 
+                setActiveSubTab(tab.id); 
+                handleResetMatchForm();
+                handleResetTeamForm();
+                handleResetTourForm();
+                setSelectedResultMatchId('');
+              }}
               style={{
                 background: 'none',
                 border: 'none',
@@ -355,7 +466,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
       {/* SUB-TAB CONTENTS */}
       <div style={{ minHeight: '300px' }}>
         
-        {/* TAB 1: MATCHES (ADD & EDIT) */}
+        {/* TAB 1: MATCHES / ROL (ADD & EDIT DETAILS) */}
         {activeSubTab === 'matches' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
             <style>{`
@@ -370,7 +481,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
               {/* Add/Edit Form */}
               <form onSubmit={handleMatchSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                  {matchId ? '✏️ Editar Partido Seleccionado' : '➕ Programar Nuevo Partido'}
+                  {matchId ? '✏️ Editar Detalles de Partido' : '➕ Programar Nuevo Partido'}
                 </h3>
                 
                 {matchSuccess && (
@@ -419,18 +530,6 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   </div>
                 </div>
 
-                {/* Scoreboards (Only applicable if live, finished, or editing score) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'rgba(255,255,255,0.01)', padding: '10px', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Goles Local</label>
-                    <input type="number" placeholder="-" value={matchHomeScore} onChange={(e) => setMatchHomeScore(e.target.value)} className="form-input" min="0" />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Goles Visitante</label>
-                    <input type="number" placeholder="-" value={matchAwayScore} onChange={(e) => setMatchAwayScore(e.target.value)} className="form-input" min="0" />
-                  </div>
-                </div>
-
                 <div className="form-group">
                   <label className="form-label">Estado de Partido</label>
                   <select value={matchStatus} onChange={(e) => setMatchStatus(e.target.value)} className="form-select" required>
@@ -444,7 +543,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
                 <div className="form-group">
                   <label className="form-label">Comentarios o Crónica</label>
-                  <input type="text" placeholder="Ej. Tarjeta azul para el #7 local." value={matchComments} onChange={(e) => setMatchComments(e.target.value)} className="form-input" />
+                  <input type="text" placeholder="Ej. Duelo importante." value={matchComments} onChange={(e) => setMatchComments(e.target.value)} className="form-input" />
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -453,7 +552,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                   </button>
                   {matchId && (
                     <button type="button" onClick={handleResetMatchForm} className="btn-outline" style={{ border: 'none' }}>
-                      Cancelar
+                      Cancelar Edición
                     </button>
                   )}
                 </div>
@@ -462,7 +561,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
               {/* Matches List Grid */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
-                  Lista de Juegos
+                  Rol General de Partidos ({matches.length})
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
@@ -479,9 +578,16 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                             {new Date(match.dateTime).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} | {new Date(match.dateTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} hrs
                           </div>
-                          <span className="badge" style={{ padding: '2px 6px', fontSize: '0.6rem', marginTop: '4px', display: 'inline-block' }}>
-                            {match.status}
-                          </span>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+                            <span className="badge" style={{ padding: '2px 6px', fontSize: '0.6rem' }}>
+                              {match.status}
+                            </span>
+                            {(match.homeScore !== null && match.awayScore !== null) && (
+                              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary)' }}>
+                                Marcador: {match.homeScore} - {match.awayScore}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           <button
@@ -490,7 +596,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                             }}
                             className="btn-outline"
                             style={{ padding: '6px', borderRadius: '6px' }}
-                            title="Editar"
+                            title="Editar Datos"
                           >
                             <Edit2 size={12} />
                           </button>
@@ -517,7 +623,459 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
           </div>
         )}
 
-        {/* TAB 2: RESERVATIONS (APPROVE / REJECT) */}
+        {/* TAB 2: RESULTS (CAPTURE MATCH SCORES) */}
+        {activeSubTab === 'results' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <style>{`
+              @media (min-width: 1024px) {
+                .results-admin-layout {
+                  grid-template-columns: 1fr 1.1fr !important;
+                }
+              }
+            `}</style>
+            <div className="results-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              
+              {/* Score capture Form */}
+              <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                  🏆 Capturar Marcador Oficial
+                </h3>
+
+                {resultSuccess && (
+                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {resultSuccess}
+                  </div>
+                )}
+                {resultError && (
+                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {resultError}
+                  </div>
+                )}
+
+                {selectedResultMatchId ? (
+                  (() => {
+                    const match = matches.find(m => m.id === selectedResultMatchId);
+                    const hTeam = teams.find(t => t.id === match?.homeTeamId) || { name: 'Local' };
+                    const aTeam = teams.find(t => t.id === match?.awayTeamId) || { name: 'Visitante' };
+
+                    return (
+                      <form onSubmit={handleResultSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        
+                        <div style={{ padding: '10px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Partido Seleccionado:</span>
+                          <div style={{ fontSize: '0.9rem', fontWeight: '700', marginTop: '4px' }}>
+                            {hTeam.logo} {hTeam.name} vs {aTeam.logo} {aTeam.name}
+                          </div>
+                        </div>
+
+                        {/* Scores Grid Inputs */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Goles Local ({hTeam.name})</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={resultHomeScore}
+                              onChange={(e) => setResultHomeScore(e.target.value)}
+                              className="form-input"
+                              style={{ textAlign: 'center', fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary)' }}
+                              required
+                            />
+                          </div>
+
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Goles Visitante ({aTeam.name})</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={resultAwayScore}
+                              onChange={(e) => setResultAwayScore(e.target.value)}
+                              className="form-input"
+                              style={{ textAlign: 'center', fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary)' }}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">Nota o Resumen del Juego</label>
+                          <input
+                            type="text"
+                            placeholder="Ej. Partido finalizado, hat-trick del capitán."
+                            value={resultComments}
+                            onChange={(e) => setResultComments(e.target.value)}
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button type="submit" className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+                            <Check size={16} /> Guardar Resultado Oficial
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedResultMatchId('');
+                              setResultHomeScore('');
+                              setResultAwayScore('');
+                              setResultComments('');
+                            }}
+                            className="btn-outline"
+                            style={{ border: 'none' }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+
+                      </form>
+                    );
+                  })()
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                    Selecciona un partido de la lista de la derecha para capturar su marcador final.
+                  </div>
+                )}
+
+              </div>
+
+              {/* Match List for score capturing */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--secondary)', paddingLeft: '6px' }}>
+                  Partidos Disponibles para Marcador
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto' }}>
+                  {matches.filter(m => m.status !== 'cancelled').sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime)).map(match => {
+                    const hTeam = teams.find(t => t.id === match.homeTeamId) || { name: 'Local' };
+                    const aTeam = teams.find(t => t.id === match.awayTeamId) || { name: 'Visitante' };
+                    
+                    return (
+                      <div 
+                        key={match.id} 
+                        onClick={() => {
+                          setSelectedResultMatchId(match.id);
+                          setResultHomeScore(match.homeScore !== null ? match.homeScore : '');
+                          setResultAwayScore(match.awayScore !== null ? match.awayScore : '');
+                          setResultComments(match.comments || '');
+                          setResultSuccess('');
+                          setResultError('');
+                        }}
+                        className="glass-panel"
+                        style={{ 
+                          padding: '10px 14px', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          borderColor: selectedResultMatchId === match.id ? 'var(--primary)' : 'var(--border-color)',
+                          backgroundColor: selectedResultMatchId === match.id ? 'rgba(251, 191, 36, 0.05)' : 'rgba(22, 28, 45, 0.75)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                            {hTeam.name} vs {aTeam.name}
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                            {new Date(match.dateTime).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} | Estatus: <strong>{match.status}</strong>
+                          </div>
+                          {(match.homeScore !== null && match.awayScore !== null) && (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--secondary)', fontWeight: '700' }}>
+                              Marcador actual: {match.homeScore} - {match.awayScore}
+                            </span>
+                          )}
+                        </div>
+                        <button className="btn-outline" style={{ padding: '6px 12px', fontSize: '0.72rem', pointerEvents: 'none' }}>
+                          <Play size={10} style={{ marginRight: '4px' }} /> Capturar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: TEAMS (CRUD) */}
+        {activeSubTab === 'teams' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <style>{`
+              @media (min-width: 1024px) {
+                .teams-admin-layout {
+                  grid-template-columns: 1fr 1.2fr !important;
+                }
+              }
+            `}</style>
+            <div className="teams-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              
+              {/* Add/Edit Team form */}
+              <form onSubmit={handleTeamSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                  {teamId ? '✏️ Editar Datos de Equipo' : '➕ Registrar Nuevo Equipo'}
+                </h3>
+
+                {teamSuccess && (
+                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {teamSuccess}
+                  </div>
+                )}
+                {teamError && (
+                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {teamError}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Nombre del Equipo *</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Deportivo Azteca" 
+                    value={teamName} 
+                    onChange={(e) => setTeamName(e.target.value)} 
+                    className="form-input" 
+                    required 
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Escudo / Logo (Emoji)</label>
+                    <select value={teamLogo} onChange={(e) => setTeamLogo(e.target.value)} className="form-select">
+                      <option value="⚽">⚽ Balón</option>
+                      <option value="👑">👑 Corona</option>
+                      <option value="🇧🇷">🇧🇷 Brasil</option>
+                      <option value="🥁">🥁 Tambor</option>
+                      <option value="🐆">🐆 Jaguar</option>
+                      <option value="🦅">🦅 Águila</option>
+                      <option value="🔴">🔴 Rojo</option>
+                      <option value="🟢">🟢 Verde</option>
+                      <option value="🔵">🔵 Azul</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Capitán *</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Carlos Ortiz" 
+                      value={teamCaptain} 
+                      onChange={(e) => setTeamCaptain(e.target.value)} 
+                      className="form-input" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Teléfono de Capitán</label>
+                  <input 
+                    type="tel" 
+                    placeholder="Ej. 5512345678" 
+                    value={teamPhone} 
+                    onChange={(e) => setTeamPhone(e.target.value)} 
+                    className="form-input" 
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Lista de Jugadores (Separados por coma)</label>
+                  <textarea 
+                    placeholder="Ej. Juan Pérez, Carlos García, Raúl Jiménez" 
+                    value={teamPlayersStr} 
+                    onChange={(e) => setTeamPlayersStr(e.target.value)} 
+                    className="form-textarea" 
+                    rows={3} 
+                  />
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Separa con coma los nombres completos.</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                    {teamId ? 'Guardar Cambios' : 'Registrar Club'}
+                  </button>
+                  {teamId && (
+                    <button type="button" onClick={handleResetTeamForm} className="btn-outline" style={{ border: 'none' }}>
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Roster list with Edit & Delete */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
+                  Equipos Registrados ({teams.length})
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+                  {teams.map(team => (
+                    <div key={team.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.5rem' }}>{team.logo}</span>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{team.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            Capitán: {team.captainName || 'Sin asignar'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => handleLoadEditTeam(team)}
+                          className="btn-outline"
+                          style={{ padding: '6px', borderRadius: '6px' }}
+                          title="Editar Equipo"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Seguro que deseas eliminar a ${team.name}?`)) {
+                              const res = deleteTeam(team.id);
+                              if (!res.success) alert(res.error);
+                            }
+                          }}
+                          className="btn-outline"
+                          style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                          title="Eliminar Equipo"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: TOURNAMENTS (CRUD) */}
+        {activeSubTab === 'tournaments' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            <style>{`
+              @media (min-width: 768px) {
+                .tournaments-admin-layout {
+                  grid-template-columns: 1fr 1fr !important;
+                }
+              }
+            `}</style>
+            <div className="tournaments-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              
+              {/* Form */}
+              <form onSubmit={handleTournamentSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                  {tourId ? '✏️ Editar Torneo' : '➕ Crear Nuevo Torneo'}
+                </h3>
+
+                {tourSuccess && (
+                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {tourSuccess}
+                  </div>
+                )}
+                {tourError && (
+                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                    {tourError}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Nombre del Torneo *</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Torneo Nocturno de Fin de Año" 
+                    value={tourName} 
+                    onChange={(e) => setTourName(e.target.value)} 
+                    className="form-input" 
+                    required 
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Categoría *</label>
+                  <select value={tourCat} onChange={(e) => setTourCat(e.target.value)} className="form-select" required>
+                    <option value="Varonil Libre">Varonil Libre</option>
+                    <option value="Femenil">Femenil</option>
+                    <option value="Veteranos">Veteranos</option>
+                    <option value="Femenil Libre">Femenil Libre</option>
+                    <option value="Infantil">Infantil</option>
+                  </select>
+                </div>
+
+                {tourId && (
+                  <div className="form-group">
+                    <label className="form-label">Estatus del Torneo</label>
+                    <select value={tourStatus} onChange={(e) => setTourStatus(e.target.value)} className="form-select" required>
+                      <option value="active">Activo</option>
+                      <option value="upcoming">Inscripciones Abiertas</option>
+                      <option value="completed">Finalizado</option>
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                    {tourId ? 'Guardar Cambios' : 'Crear Torneo'}
+                  </button>
+                  {tourId && (
+                    <button type="button" onClick={handleResetTourForm} className="btn-outline" style={{ border: 'none' }}>
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Tournament List with Edit & Delete */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
+                  Torneos Disponibles ({tournaments.length})
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {tournaments.map(t => (
+                    <div key={t.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{t.name}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Cat: {t.category} | Estado: <strong>{t.status || 'active'}</strong>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => handleLoadEditTour(t)}
+                          className="btn-outline"
+                          style={{ padding: '6px', borderRadius: '6px' }}
+                          title="Editar Torneo"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Seguro que deseas eliminar el torneo ${t.name}?`)) {
+                              const res = deleteTournament(t.id);
+                              if (!res.success) alert(res.error);
+                            }
+                          }}
+                          className="btn-outline"
+                          style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
+                          title="Eliminar Torneo"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: RESERVATIONS (APPROVE / REJECT) */}
         {activeSubTab === 'reservations' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--secondary)', paddingLeft: '6px' }}>
@@ -612,10 +1170,10 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
                                 </button>
                               </>
                             ) : (
-                              // Undo action or delete
+                              // Delete request from list
                               <button
                                 onClick={() => {
-                                  if (window.confirm('¿Deseas eliminar esta solicitud de reservación del historial?')) {
+                                  if (window.confirm('¿Deseas eliminar esta solicitud de reservación?')) {
                                     deleteReservation(res.id);
                                   }
                                 }}
@@ -637,195 +1195,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
           </div>
         )}
 
-        {/* TAB 3: TEAMS (ADD & ROSTER) */}
-        {activeSubTab === 'teams' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-            <style>{`
-              @media (min-width: 1024px) {
-                .teams-admin-layout {
-                  grid-template-columns: 1fr 1.2fr !important;
-                }
-              }
-            `}</style>
-            <div className="teams-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              
-              {/* Add Team form */}
-              <form onSubmit={handleTeamSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                  ➕ Registrar Nuevo Equipo
-                </h3>
-
-                {teamSuccess && (
-                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
-                    {teamSuccess}
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Nombre del Equipo *</label>
-                  <input type="text" placeholder="Ej. Deportivo Azteca" value={teamName} onChange={(e) => setTeamName(e.target.value)} className="form-input" required />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Escudo / Logo (Emoji)</label>
-                    <select value={teamLogo} onChange={(e) => setTeamLogo(e.target.value)} className="form-select">
-                      <option value="⚽">⚽ Balón</option>
-                      <option value="👑">👑 Corona</option>
-                      <option value="🇧🇷">🇧🇷 Brasil</option>
-                      <option value="🥁">🥁 Tambor</option>
-                      <option value="🐆">🐆 Jaguar</option>
-                      <option value="🦅">🦅 Águila</option>
-                      <option value="🔴">🔴 Rojo</option>
-                      <option value="🟢">🟢 Verde</option>
-                      <option value="🔵">🔵 Azul</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Capitán *</label>
-                    <input type="text" placeholder="Ej. Carlos Ortiz" value={teamCaptain} onChange={(e) => setTeamCaptain(e.target.value)} className="form-input" required />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Teléfono de Capitán</label>
-                  <input type="tel" placeholder="Ej. 5512345678" value={teamPhone} onChange={(e) => setPhone(e.target.value)} className="form-input" />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Lista de Jugadores (Separados por coma)</label>
-                  <textarea 
-                    placeholder="Ej. Juan Pérez, Carlos García, Raúl Jiménez" 
-                    value={teamPlayersStr} 
-                    onChange={(e) => setTeamPlayersStr(e.target.value)} 
-                    className="form-textarea" 
-                    rows={3} 
-                  />
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Mínimo sugerido 5 jugadores registrados.</span>
-                </div>
-
-                <button type="submit" className="btn-primary" style={{ justifyContent: 'center', marginTop: '6px' }}>
-                  Registrar Club
-                </button>
-              </form>
-
-              {/* Roster list for delete */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
-                  Equipos Registrados ({teams.length})
-                </h3>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '450px', overflowY: 'auto' }}>
-                  {teams.map(team => (
-                    <div key={team.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '1.5rem' }}>{team.logo}</span>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{team.name}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            Capitán: {team.captainName || 'Sin asignar'}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const res = deleteTeam(team.id);
-                          if (!res.success) alert(res.error);
-                        }}
-                        className="btn-outline"
-                        style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
-                        title="Eliminar Equipo"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: TOURNAMENTS */}
-        {activeSubTab === 'tournaments' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-            <style>{`
-              @media (min-width: 768px) {
-                .tournaments-admin-layout {
-                  grid-template-columns: 1fr 1fr !important;
-                }
-              }
-            `}</style>
-            <div className="tournaments-admin-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              
-              {/* Form */}
-              <form onSubmit={handleTournamentSubmit} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                  ➕ Crear Nuevo Torneo
-                </h3>
-
-                {tourSuccess && (
-                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px', borderRadius: '8px', fontSize: '0.78rem' }}>
-                    {tourSuccess}
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Nombre de Torneo *</label>
-                  <input type="text" placeholder="Ej. Torneo Sabatino Sabrosón" value={tourName} onChange={(e) => setTourName(e.target.value)} className="form-input" required />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Categoría *</label>
-                  <select value={tourCat} onChange={(e) => setTourCat(e.target.value)} className="form-select" required>
-                    <option value="Varonil Libre">Varonil Libre</option>
-                    <option value="Femenil">Femenil</option>
-                    <option value="Veteranos">Veteranos</option>
-                    <option value="Femenil Libre">Femenil Libre</option>
-                    <option value="Infantil">Infantil</option>
-                  </select>
-                </div>
-
-                <button type="submit" className="btn-primary" style={{ justifyContent: 'center', marginTop: '6px' }}>
-                  Crear Torneo
-                </button>
-              </form>
-
-              {/* List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
-                  Torneos Disponibles
-                </h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {tournaments.map(t => (
-                    <div key={t.id} className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{t.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cat: {t.category} | Estado: {t.status}</div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const res = deleteTournament(t.id);
-                          if (!res.success) alert(res.error);
-                        }}
-                        className="btn-outline"
-                        style={{ padding: '6px', borderRadius: '6px', color: '#EF4444' }}
-                        title="Eliminar Torneo"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: ANNOUNCEMENTS */}
+        {/* TAB 6: ANNOUNCEMENTS */}
         {activeSubTab === 'announcements' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
             <style>{`
@@ -851,16 +1221,36 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
 
                 <div className="form-group">
                   <label className="form-label">Título del Anuncio *</label>
-                  <input type="text" placeholder="Ej. ¡Nueva premiación en efectivo!" value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} className="form-input" required />
+                  <input 
+                    type="text" 
+                    placeholder="Ej. ¡Nueva premiación en efectivo!" 
+                    value={annTitle} 
+                    onChange={(e) => setAnnTitle(e.target.value)} 
+                    className="form-input" 
+                    required 
+                  />
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Contenido *</label>
-                  <textarea placeholder="Redacta la noticia para el tablero de la pantalla de inicio..." value={annContent} onChange={(e) => setAnnContent(e.target.value)} className="form-textarea" rows={3} required />
+                  <textarea 
+                    placeholder="Redacta la noticia para el tablero de la pantalla de inicio..." 
+                    value={annContent} 
+                    onChange={(e) => setAnnContent(e.target.value)} 
+                    className="form-textarea" 
+                    rows={3} 
+                    required 
+                  />
                 </div>
 
                 <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input type="checkbox" checked={annImportant} onChange={(e) => setAnnImportant(e.target.checked)} id="ann-check" style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                  <input 
+                    type="checkbox" 
+                    checked={annImportant} 
+                    onChange={(e) => setAnnImportant(e.target.checked)} 
+                    id="ann-check" 
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }} 
+                  />
                   <label htmlFor="ann-check" style={{ fontSize: '0.85rem', fontWeight: '500', cursor: 'pointer' }}>
                     ✨ Destacar anuncio como IMPORTANTE (Borde dorado en Inicio)
                   </label>
@@ -874,7 +1264,7 @@ const AdminPanel = ({ selectedEditMatch, setSelectedEditMatch }) => {
               {/* List */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, borderLeft: '3px solid var(--primary)', paddingLeft: '6px' }}>
-                  Noticias Publicadas
+                  Noticias Publicadas ({announcements.length})
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

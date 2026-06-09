@@ -62,7 +62,7 @@ function App() {
 
   return (
     <div className="app-wrapper">
-      <Header />
+      <Header currentTab={currentTab} setCurrentTab={setCurrentTab} />
       
       <Navigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
       

@@ -2,7 +2,7 @@ import React from 'react';
 import { useDatabase } from '../context/DatabaseContext';
 import { Shield, User, Eye, LogOut } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ currentTab, setCurrentTab }) => {
   const { currentRole, setCurrentRole, handleLogout } = useDatabase();
 
   const getRoleBadge = () => {
@@ -63,7 +63,17 @@ const Header = () => {
             {/* Quick selector dropdown */}
             <select
               value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value)}
+              onChange={(e) => {
+                const newRole = e.target.value;
+                setCurrentRole(newRole);
+                if (setCurrentTab) {
+                  if (newRole === 'admin' || newRole === 'auxiliar') {
+                    setCurrentTab('admin');
+                  } else {
+                    setCurrentTab('home');
+                  }
+                }
+              }}
               style={{
                 backgroundColor: 'rgba(15, 23, 42, 0.8)',
                 border: '1px solid var(--border-color)',
@@ -83,7 +93,10 @@ const Header = () => {
 
             {currentRole !== 'public' && (
               <button 
-                onClick={handleLogout}
+                onClick={() => {
+                  handleLogout();
+                  if (setCurrentTab) setCurrentTab('home');
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
